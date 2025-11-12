@@ -25,6 +25,7 @@ const InstituteList = () => {
   const fetchInstitutes = async () => {
     try {
       const data = await instituteService.getAllInstitutes(filters);
+      // Ensure the response has the expected structure and is an array
       if (data && Array.isArray(data.institutes)) {
         setInstitutes(data.institutes);
       } else {
@@ -56,24 +57,29 @@ const InstituteList = () => {
     });
   };
 
+  // === FIX 1: Added safety checks to prevent crashes ===
   const getAverageRating = (institute) => {
-    if (!institute.reviews || institute.reviews.length === 0) return 0;
-    const sum = institute.reviews.reduce((acc, review) => acc + review.rating, 0);
+    // Check if reviews exist and is an array before reducing
+    if (!institute.reviews || !Array.isArray(institute.reviews) || institute.reviews.length === 0) return 0;
+    const sum = institute.reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
     return (sum / institute.reviews.length).toFixed(1);
   };
 
+  // === FIX 2: Added safety checks to prevent crashes ===
   const getPrimaryImage = (institute) => {
-    if (institute.images && institute.images.length > 0) {
-      const primaryImage = institute.images.find(img => img.isPrimary);
-      return primaryImage || institute.images[0];
+    // Check if images exist and is an array before finding
+    if (!institute.images || !Array.isArray(institute.images) || institute.images.length === 0) {
+      return null;
     }
-    return null;
+    const primaryImage = institute.images.find(img => img.isPrimary);
+    return primaryImage || institute.images[0];
   };
 
+  // === FIX 3: Force HTTPS to prevent Mixed Content warnings ===
   const getImageUrl = (image) => {
-    if (!image) return null;
-    if (image.url.startsWith('http')) return image.url;
-    return `${API_URL}${image.url}`;
+    if (!image || !image.url) return null;
+    // Force HTTPS to avoid mixed content issues
+    return image.url.replace('http://', 'https://');
   };
 
   if (loading) return <div className="loading">Loading institutes...</div>;
@@ -177,7 +183,8 @@ const InstituteList = () => {
             <p>Try adjusting your filters to see more results</p>
           </div>
         ) : (
-          institutes.map(inst => {
+          // === FIX 4: Added safety check before the main .map() call ===
+          institutes && Array.isArray(institutes) && institutes.map(inst => {
             const primaryImage = getPrimaryImage(inst);
             const imageUrl = getImageUrl(primaryImage);
             const logoUrl = getImageUrl(inst.logo);

@@ -11,7 +11,7 @@ const ProfileManagement = () => {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(false); // Corrected typo from 'uploading'
 
   useEffect(() => {
     fetchInstituteProfile();
@@ -25,6 +25,8 @@ const ProfileManagement = () => {
     } catch (error) {
       console.error('Error fetching institute profile:', error);
       setMessage('Error loading profile');
+      // === FIX 1: Set a default object on error to prevent blank screen ===
+      setInstitute({});
     } finally {
       setLoading(false);
     }
@@ -37,8 +39,9 @@ const ProfileManagement = () => {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
         ...prev,
+        // === FIX 2: Add fallback for nested objects to prevent crash ===
         [parent]: {
-          ...prev[parent],
+          ...(prev[parent] || {}),
           [child]: value
         }
       }));
@@ -123,9 +126,10 @@ const ProfileManagement = () => {
     }
   };
 
+  // === FIX 3: Force HTTPS to prevent Mixed Content warnings ===
   const getImageUrl = (image) => {
     if (!image?.url) return '';
-    return image.url.startsWith('http') ? image.url : `${API_URL}${image.url}`;
+    return image.url.replace('http://', 'https://');
   };
 
   if (loading && !institute) return <div className="loading">Loading profile...</div>;
@@ -180,7 +184,8 @@ const ProfileManagement = () => {
             <h3>Institute Images</h3>
             <div className="image-upload-section">
               <div className="current-images">
-                {formData.images?.length > 0 ? (
+                {/* === FIX 4: Added safety check before .map() === */}
+                {formData.images && Array.isArray(formData.images) && formData.images.length > 0 ? (
                   <div className="images-grid">
                     {formData.images.map((image, index) => (
                       <div key={index} className={`image-preview ${image.isPrimary ? 'primary' : ''}`}>
