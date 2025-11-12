@@ -1,10 +1,9 @@
+// ProfileManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { instituteService } from '../../services/institute';
 import { uploadService } from '../../services/upload';
+import { API_URL } from '../../config';
 import './InstituteDashboard.css';
-
-// Use environment variable for API URL
-const API_URL = process.env.REACT_APP_API_URL;
 
 const ProfileManagement = () => {
   const [institute, setInstitute] = useState(null);
@@ -117,13 +116,13 @@ const ProfileManagement = () => {
       setMessage('Profile updated successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
+      console.error('Error updating profile:', error);
       setMessage('Error updating profile');
     } finally {
       setLoading(false);
     }
   };
 
-  // Generate full image URL
   const getImageUrl = (image) => {
     if (!image?.url) return '';
     return image.url.startsWith('http') ? image.url : `${API_URL}${image.url}`;
@@ -215,8 +214,77 @@ const ProfileManagement = () => {
           </div>
 
           {/* Basic Info, Contact, Address, Description */}
-          {/* Keep existing form fields; image URLs now use getImageUrl() */}
-          
+          <div className="form-section">
+            <h3>Basic Information</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Institute Name</label>
+                <input type="text" name="name" value={formData.name || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <select name="category" value={formData.category || ''} onChange={handleChange} disabled={!editing}>
+                  <option value="school">School</option>
+                  <option value="college">College</option>
+                  <option value="university">University</option>
+                  <option value="coaching">Coaching Center</option>
+                  <option value="preschool">Preschool</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Affiliation</label>
+                <input type="text" name="affiliation" value={formData.affiliation || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h3>Contact Information</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" name="contact.email" value={formData.contact?.email || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+              <div className="form-group">
+                <label>Phone</label>
+                <input type="tel" name="contact.phone" value={formData.contact?.phone || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+              <div className="form-group">
+                <label>Website</label>
+                <input type="url" name="contact.website" value={formData.contact?.website || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h3>Address</h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Street</label>
+                <input type="text" name="address.street" value={formData.address?.street || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+              <div className="form-group">
+                <label>City</label>
+                <input type="text" name="address.city" value={formData.address?.city || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+              <div className="form-group">
+                <label>State</label>
+                <input type="text" name="address.state" value={formData.address?.state || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+              <div className="form-group">
+                <label>Pincode</label>
+                <input type="text" name="address.pincode" value={formData.address?.pincode || ''} onChange={handleChange} disabled={!editing} />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h3>Description</h3>
+            <div className="form-group">
+              <textarea name="description" value={formData.description || ''} onChange={handleChange} disabled={!editing} rows="4" placeholder="Describe your institute..." />
+            </div>
+          </div>
+
           {editing && (
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>

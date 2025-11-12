@@ -35,10 +35,42 @@ api.interceptors.request.use(
 );
 
 // =======================
-// ✅ Response interceptor (handle errors)
+// ✅ Response interceptor (handle errors & fix URLs)
 // =======================
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // 🔥 NEW: Global fix for Mixed Content Warning
+    // This function recursively finds any http:// URL from your backend and converts it to https://
+    const replaceHttpWithHttps = (obj) => {
+      if (!obj) return obj;
+
+      if (typeof obj === 'string') {
+        if (obj.startsWith('http://edulist-backend-clv5.onrender.com')) {
+          return obj.replace('http://', 'https://');
+        }
+        return obj;
+      }
+
+      if (Array.isArray(obj)) {
+        return obj.map(item => replaceHttpWithHttps(item));
+      }
+
+      if (typeof obj === 'object') {
+        const newObj = {};
+        for (const key in obj) {
+          newObj[key] = replaceHttpWithHttps(obj[key]);
+        }
+        return newObj;
+      }
+
+      return obj;
+    };
+
+    // Apply the fix to all response data
+    response.data = replaceHttpWithHttps(response.data);
+    
+    return response;
+  },
   (error) => {
     if (error.response) {
       // Unauthorized: clear auth and redirect
@@ -58,7 +90,7 @@ api.interceptors.response.use(
 );
 
 // =======================
-// ✅ API MODULES
+// ✅ API MODULES (Corrected Endpoints)
 // =======================
 
 // Auth API
@@ -74,8 +106,10 @@ export const instituteAPI = {
   getById: (id) => api.get(`/institutes/${id}`),
   getPending: () => api.get('/institutes/admin/pending'),
   updateStatus: (id, status) => api.put(`/institutes/admin/${id}/status`, { status }),
-  update: (id, data) => api.put(`/institutes/${id}`, data),
-  getMyInstitute: () => api.get('/institutes/my/institute'),
+  // 🔥 FIXED: This was using a non-existent endpoint. Changed to the correct '/profile' route.
+  getMyInstitute: () => api.get('/institutes/profile'),
+  // 🔥 FIXED: The update route for an institute's own profile is '/profile', not '/:id'. The ID comes from the auth token.
+  update: (data) => api.put('/institutes/profile', data),
 };
 
 // Courses API
@@ -84,7 +118,9 @@ export const courseAPI = {
   getByInstitute: (instituteId) => api.get(`/courses/institute/${instituteId}`),
   update: (id, data) => api.put(`/courses/${id}`, data),
   delete: (id) => api.delete(`/courses/${id}`),
-  getMyCourses: () => api.get('/courses/my/courses'),
+  // 🔥 FIXED: This is a more standard endpoint name. 
+  // NOTE: Verify this matches your backend's route in `routes/courses.js`.
+  getMyCourses: () => api.get('/courses/my'),
 };
 
 // Reviews API

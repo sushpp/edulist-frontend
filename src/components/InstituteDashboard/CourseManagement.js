@@ -27,9 +27,12 @@ const CourseManagement = () => {
   const fetchCourses = async () => {
     try {
       const data = await courseService.getCoursesByInstitute();
-      setCourses(data);
+      // Ensure we always set an array, even if data is null/undefined
+      setCourses(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching courses:', error);
+      // Set to empty array on error to prevent crashes
+      setCourses([]); 
     }
   };
 
@@ -325,7 +328,8 @@ const CourseManagement = () => {
           </div>
         ) : (
           <div className="courses-grid">
-            {courses.map(course => (
+            {/* === FIX 1: Added safety check before .map() === */}
+            {courses && Array.isArray(courses) && courses.map(course => (
               <div key={course._id} className="course-card">
                 <div className="course-header">
                   <h3>{course.title}</h3>
@@ -348,7 +352,8 @@ const CourseManagement = () => {
                 {/* Course Image */}
                 {course.imageUrl && (
                   <div className="course-image">
-                    <img src={course.imageUrl} alt={course.title} />
+                    {/* === FIX 2: Replace http with https in the image URL === */}
+                    <img src={course.imageUrl.replace('http://', 'https://')} alt={course.title} />
                   </div>
                 )}
                 
