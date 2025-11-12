@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { instituteService } from '../../services/institute';
 import './UserPanel.css';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const InstituteList = () => {
   const [institutes, setInstitutes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,24 +19,24 @@ const InstituteList = () => {
 
   useEffect(() => {
     fetchInstitutes();
+    // eslint-disable-next-line
   }, [filters]);
 
-const fetchInstitutes = async () => {
-  try {
-    const data = await instituteService.getAllInstitutes(filters);
-    if (data && Array.isArray(data.institutes)) {
-      setInstitutes(data.institutes);
-    } else {
+  const fetchInstitutes = async () => {
+    try {
+      const data = await instituteService.getAllInstitutes(filters);
+      if (data && Array.isArray(data.institutes)) {
+        setInstitutes(data.institutes);
+      } else {
+        setInstitutes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching institutes:', error);
       setInstitutes([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching institutes:', error);
-    setInstitutes([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
@@ -61,7 +63,6 @@ const fetchInstitutes = async () => {
   };
 
   const getPrimaryImage = (institute) => {
-    // Check if institute has images array and find primary image
     if (institute.images && institute.images.length > 0) {
       const primaryImage = institute.images.find(img => img.isPrimary);
       return primaryImage || institute.images[0];
@@ -71,16 +72,11 @@ const fetchInstitutes = async () => {
 
   const getImageUrl = (image) => {
     if (!image) return null;
-    // Handle both full URLs and relative paths
-    if (image.url.startsWith('http')) {
-      return image.url;
-    }
-    return `http://localhost:5000${image.url}`;
+    if (image.url.startsWith('http')) return image.url;
+    return `${API_URL}${image.url}`;
   };
 
-  if (loading) {
-    return <div className="loading">Loading institutes...</div>;
-  }
+  if (loading) return <div className="loading">Loading institutes...</div>;
 
   return (
     <div className="institute-list-page">
@@ -93,9 +89,7 @@ const fetchInstitutes = async () => {
       <div className="filters-section">
         <div className="filters-header">
           <h3>Filters</h3>
-          <button onClick={clearFilters} className="clear-filters">
-            Clear All
-          </button>
+          <button onClick={clearFilters} className="clear-filters">Clear All</button>
         </div>
 
         <div className="filters-grid">
@@ -183,99 +177,35 @@ const fetchInstitutes = async () => {
             <p>Try adjusting your filters to see more results</p>
           </div>
         ) : (
-          institutes.map(institute => {
-            const primaryImage = getPrimaryImage(institute);
+          institutes.map(inst => {
+            const primaryImage = getPrimaryImage(inst);
             const imageUrl = getImageUrl(primaryImage);
-            const logoUrl = getImageUrl(institute.logo);
+            const logoUrl = getImageUrl(inst.logo);
 
             return (
-              <div key={institute._id} className="institute-card">
+              <div key={inst._id} className="institute-card">
                 <div className="card-image">
-                  {imageUrl ? (
-                    <img 
-                      src={imageUrl} 
-                      alt={institute.name}
-                      className="institute-main-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div className={`image-placeholder ${imageUrl ? 'fallback' : ''}`}>
-                    {logoUrl ? (
-                      <img 
-                        src={logoUrl} 
-                        alt={`${institute.name} Logo`}
-                        className="institute-logo"
-                      />
-                    ) : (
-                      institute.name.charAt(0).toUpperCase()
-                    )}
+                  {imageUrl && <img src={imageUrl} alt={inst.name} className="institute-main-image" />}
+                  <div className="image-placeholder">
+                    {logoUrl ? <img src={logoUrl} alt={`${inst.name} Logo`} className="institute-logo" />
+                      : inst.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="card-badge">
-                    <span className="rating">
-                      ⭐ {getAverageRating(institute)}
-                    </span>
-                    <span className="reviews">
-                      ({institute.reviews?.length || 0} reviews)
-                    </span>
+                    <span className="rating">⭐ {getAverageRating(inst)}</span>
+                    <span className="reviews">({inst.reviews?.length || 0} reviews)</span>
                   </div>
-                  {institute.images && institute.images.length > 1 && (
-                    <div className="image-count-badge">
-                      +{institute.images.length - 1}
-                    </div>
-                  )}
                 </div>
 
                 <div className="card-content">
-                  <div className="institute-header">
-                    {logoUrl && (
-                      <img 
-                        src={logoUrl} 
-                        alt={`${institute.name} Logo`}
-                        className="institute-logo-small"
-                      />
-                    )}
-                    <h3 className="institute-name">{institute.name}</h3>
-                  </div>
-                  <p className="institute-category">
-                    {institute.category} • {institute.affiliation}
-                  </p>
-                  <p className="institute-location">
-                    📍 {institute.address?.city}, {institute.address?.state}
-                  </p>
-                  <p className="institute-description">
-                    {institute.description?.substring(0, 100)}...
-                  </p>
-
-                  <div className="facilities">
-                    {institute.facilities?.slice(0, 3).map((facility, index) => (
-                      <span key={index} className="facility-tag">
-                        {facility.name}
-                      </span>
-                    ))}
-                    {institute.facilities?.length > 3 && (
-                      <span className="facility-tag">
-                        +{institute.facilities.length - 3} more
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="institute-name">{inst.name}</h3>
+                  <p className="institute-category">{inst.category} • {inst.affiliation}</p>
+                  <p className="institute-location">📍 {inst.address?.city}, {inst.address?.state}</p>
+                  <p className="institute-description">{inst.description?.substring(0, 100)}...</p>
                 </div>
 
                 <div className="card-actions">
-                  <Link 
-                    to={`/institute/${institute._id}`}
-                    className="btn btn-primary"
-                  >
-                    View Details
-                  </Link>
-                  <Link 
-                    to={`/institute/${institute._id}#enquiry`}
-                    className="btn btn-outline"
-                  >
-                    Enquire Now
-                  </Link>
+                  <Link to={`/institute/${inst._id}`} className="btn btn-primary">View Details</Link>
+                  <Link to={`/institute/${inst._id}#enquiry`} className="btn btn-outline">Enquire Now</Link>
                 </div>
               </div>
             );
