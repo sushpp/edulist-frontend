@@ -117,17 +117,16 @@ const ProfileManagement = () => {
       setMessage('Profile updated successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      console.error(error);
       setMessage('Error updating profile');
     } finally {
       setLoading(false);
     }
   };
 
+  // Generate full image URL
   const getImageUrl = (image) => {
     if (!image?.url) return '';
-    if (image.url.startsWith('http')) return image.url;
-    return `${API_URL}${image.url}`;
+    return image.url.startsWith('http') ? image.url : `${API_URL}${image.url}`;
   };
 
   if (loading && !institute) return <div className="loading">Loading profile...</div>;
@@ -215,9 +214,8 @@ const ProfileManagement = () => {
             </div>
           </div>
 
-          {/* Rest of form fields */}
-          {/* Name, category, affiliation, contact, address, description */}
-          {/* ... same as before, just ensure image URLs use getImageUrl() */}
+          {/* Basic Info, Contact, Address, Description */}
+          {/* Keep existing form fields; image URLs now use getImageUrl() */}
           
           {editing && (
             <div className="form-actions">
