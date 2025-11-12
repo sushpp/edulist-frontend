@@ -2,11 +2,15 @@ import axios from 'axios';
 
 // =======================
 // ✅ Base API URL
-// dynamic for local dev or production
+// Auto-select between localhost and Render backend
 // =======================
+const isLocalhost = window.location.hostname === 'localhost';
+
 const API_URL = process.env.REACT_APP_API_URL
-  ? process.env.REACT_APP_API_URL.replace(/\/$/, '') // remove trailing slash if exists
-  : 'http://localhost:5000/api';
+  ? process.env.REACT_APP_API_URL.replace(/\/$/, '') // from .env if present
+  : isLocalhost
+  ? 'http://localhost:5000/api' // ✅ local backend
+  : 'https://edulist-backend-clv5.onrender.com/api'; // ✅ Render backend (production)
 
 // =======================
 // ✅ Create axios instance
