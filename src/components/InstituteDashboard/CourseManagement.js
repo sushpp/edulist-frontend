@@ -27,7 +27,7 @@ const CourseManagement = () => {
   const fetchCourses = async () => {
     try {
       const data = await courseService.getCoursesByInstitute();
-      // Ensure we always set an array, even if data is null/undefined
+      // The service now correctly extracts the array, so this is safer
       setCourses(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -104,7 +104,6 @@ const CourseManagement = () => {
     if (file) {
       setFormData(prev => ({ ...prev, image: file }));
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target.result);
@@ -176,7 +175,8 @@ const CourseManagement = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="course-form">
-              <div className="form-grid">
+              {/* ... (form fields remain the same) ... */}
+               <div className="form-grid">
                 <div className="form-group">
                   <label>Course Title *</label>
                   <input
@@ -246,7 +246,6 @@ const CourseManagement = () => {
                 />
               </div>
 
-              {/* Image Upload */}
               <div className="form-group">
                 <label>Course Image</label>
                 <input
@@ -328,7 +327,6 @@ const CourseManagement = () => {
           </div>
         ) : (
           <div className="courses-grid">
-            {/* === FIX 1: Added safety check before .map() === */}
             {courses && Array.isArray(courses) && courses.map(course => (
               <div key={course._id} className="course-card">
                 <div className="course-header">
@@ -349,10 +347,8 @@ const CourseManagement = () => {
                   </div>
                 </div>
                 
-                {/* Course Image */}
                 {course.imageUrl && (
                   <div className="course-image">
-                    {/* === FIX 2: Replace http with https in the image URL === */}
                     <img src={course.imageUrl.replace('http://', 'https://')} alt={course.title} />
                   </div>
                 )}
@@ -372,7 +368,8 @@ const CourseManagement = () => {
                   <div className="course-facilities">
                     <strong>Facilities:</strong>
                     <div className="facilities-tags">
-                      {course.facilities.map((facility, index) => (
+                      {/* === 🔥 NEW SAFETY CHECK ADDED HERE === */}
+                      {course.facilities && Array.isArray(course.facilities) && course.facilities.map((facility, index) => (
                         <span key={index} className="facility-tag">
                           {facility}
                         </span>
