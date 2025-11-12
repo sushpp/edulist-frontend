@@ -19,16 +19,22 @@ const InstituteList = () => {
     fetchInstitutes();
   }, [filters]);
 
-  const fetchInstitutes = async () => {
-    try {
-      const data = await instituteService.getAllInstitutes(filters);
-      setInstitutes(data);
-    } catch (error) {
-      console.error('Error fetching institutes:', error);
-    } finally {
-      setLoading(false);
+const fetchInstitutes = async () => {
+  try {
+    const data = await instituteService.getAllInstitutes(filters);
+    if (data && Array.isArray(data.institutes)) {
+      setInstitutes(data.institutes);
+    } else {
+      setInstitutes([]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching institutes:', error);
+    setInstitutes([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({

@@ -149,3 +149,48 @@
     padding: 25px 15px;
   }
 }
+/* Demo Credentials Styles */
+.demo-credentials {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #3498db;
+}
+
+.demo-credentials h4 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.demo-credential {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.demo-credential:last-child {
+  margin-bottom: 0;
+}
+
+.demo-credential strong {
+  color: #2c3e50;
+}
+
+.demo-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.2s;
+}
+
+.demo-btn:hover {
+  background: #2980b9;
+}

@@ -20,14 +20,17 @@ const HomePage = () => {
     fetchStats();
   }, []);
 
-  const fetchFeaturedInstitutes = async () => {
-    try {
-      const institutes = await instituteService.getAllInstitutes();
-      setFeaturedInstitutes(institutes.slice(0, 6));
-    } catch (error) {
-      console.error('Error fetching featured institutes:', error);
-    }
-  };
+const fetchFeaturedInstitutes = async () => {
+  try {
+    const data = await instituteService.getAllInstitutes();
+    const institutes = Array.isArray(data.institutes) ? data.institutes : [];
+    const featured = institutes.slice(0, 6);
+    setFeaturedInstitutes(featured);
+  } catch (error) {
+    console.error('Error fetching featured institutes:', error);
+    setFeaturedInstitutes([]);
+  }
+};
 
   const fetchStats = async () => {
     setStats({

@@ -14,7 +14,15 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching institutes:', error);
-      throw new Error('Failed to fetch institutes');
+      
+      // Check if it's a network error or server error
+      if (error.code === 'NETWORK_ERROR' || !error.response) {
+        throw new Error('Unable to connect to server. Please check your internet connection.');
+      }
+      
+      // Use the error message from backend or a generic one
+      const errorMessage = error.response?.data?.message || 'Failed to fetch institutes';
+      throw new Error(errorMessage);
     }
   },
 
@@ -24,7 +32,13 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching institute:', error);
-      throw new Error('Failed to fetch institute details');
+      
+      if (error.response?.status === 404) {
+        throw new Error('Institute not found');
+      }
+      
+      const errorMessage = error.response?.data?.message || 'Failed to fetch institute details';
+      throw new Error(errorMessage);
     }
   },
 
@@ -34,7 +48,13 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching institute profile:', error);
-      throw new Error('Failed to fetch institute profile');
+      
+      if (error.response?.status === 401) {
+        throw new Error('Please login to access institute profile');
+      }
+      
+      const errorMessage = error.response?.data?.message || 'Failed to fetch institute profile';
+      throw new Error(errorMessage);
     }
   },
 
@@ -44,7 +64,9 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error updating institute:', error);
-      throw new Error('Failed to update institute profile');
+      
+      const errorMessage = error.response?.data?.message || 'Failed to update institute profile';
+      throw new Error(errorMessage);
     }
   },
 
@@ -54,7 +76,9 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error adding facility:', error);
-      throw new Error('Failed to add facility');
+      
+      const errorMessage = error.response?.data?.message || 'Failed to add facility';
+      throw new Error(errorMessage);
     }
   },
 
@@ -64,7 +88,9 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error removing facility:', error);
-      throw new Error('Failed to remove facility');
+      
+      const errorMessage = error.response?.data?.message || 'Failed to remove facility';
+      throw new Error(errorMessage);
     }
   }
 };
