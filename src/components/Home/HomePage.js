@@ -22,16 +22,26 @@ const HomePage = () => {
 
   const fetchFeaturedInstitutes = async () => {
     setIsLoading(true);
-    setFetchError(null); // Reset error on new fetch
+    setFetchError(null);
     try {
       const response = await instituteService.getAllInstitutes();
-      // The service guarantees that response.institutes is an array
-      const featured = response.institutes.slice(0, 6);
-      setFeaturedInstitutes(featured);
+      
+      // FIX: Safely handle the response and ensure we get an array
+      const institutesData = response?.institutes || response?.data || response || [];
+      
+      // FIX: Check if it's actually an array before using slice
+      if (Array.isArray(institutesData)) {
+        const featured = institutesData.slice(0, 6);
+        setFeaturedInstitutes(featured);
+      } else {
+        console.warn('Expected array for featured institutes but got:', typeof institutesData, institutesData);
+        setFeaturedInstitutes([]);
+        setFetchError('Invalid data format received from server');
+      }
     } catch (error) {
       console.error('Error fetching featured institutes:', error);
-      setFetchError(error.message); // Set the user-friendly error message
-      setFeaturedInstitutes([]); // Ensure array state on error
+      setFetchError(error.message || 'Failed to fetch institutes');
+      setFeaturedInstitutes([]);
     } finally {
       setIsLoading(false);
     }
@@ -116,25 +126,38 @@ const HomePage = () => {
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              featuredInstitutes.map(institute => (
+              // FIX: Added safety check before mapping
+              Array.isArray(featuredInstitutes) && featuredInstitutes.map(institute => (
                 <div key={institute._id} className="institute-card">
                   <div className="card-image">
-                    <div className="image-placeholder">{institute.name.charAt(0).toUpperCase()}</div>
-                    <div className="card-badge"><span className="rating">⭐ {getAverageRating(institute)}</span></div>
+                    <div className="image-placeholder">
+                      {institute.name?.charAt(0).toUpperCase() || 'I'}
+                    </div>
+                    <div className="card-badge">
+                      <span className="rating">⭐ {getAverageRating(institute)}</span>
+                    </div>
                   </div>
                   <div className="card-content">
-                    <h3>{institute.name}</h3>
+                    <h3>{institute.name || 'Unnamed Institute'}</h3>
                     <p className="category">{institute.category} • {institute.affiliation}</p>
-                    <p className="location">📍 {institute.address?.city}, {institute.address?.state}</p>
-                    <p className="description">{institute.description?.substring(0, 80)}...</p>
+                    <p className="location">
+                      📍 {institute.address?.city}, {institute.address?.state}
+                    </p>
+                    <p className="description">
+                      {institute.description?.substring(0, 80)}...
+                    </p>
                   </div>
                   <div className="card-actions">
-                    <Link to={`/institute/${institute._id}`} className="btn btn-primary">View Details</Link>
+                    <Link to={`/institute/${institute._id}`} className="btn btn-primary">
+                      View Details
+                    </Link>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="empty-state"><p>No featured institutes available at the moment.</p></div>
+              <div className="empty-state">
+                <p>No featured institutes available at the moment.</p>
+              </div>
             )}
           </div>
         </div>
@@ -146,7 +169,15 @@ const HomePage = () => {
           <div className="cta-content">
             <h2>Are You an Educational Institute?</h2>
             <p>Join EduList to reach thousands of students and parents looking for quality education</p>
-            {user ? (user.role === 'institute' ? (<Link to="/institute/dashboard" className="btn btn-light">Go to Dashboard</Link>) : (<Link to="/register?role=institute" className="btn btn-light">Register Your Institute</Link>)) : (<Link to="/register?role=institute" className="btn btn-light">Register Your Institute</Link>)}
+            {user ? (
+              user.role === 'institute' ? (
+                <Link to="/institute/dashboard" className="btn btn-light">Go to Dashboard</Link>
+              ) : (
+                <Link to="/register?role=institute" className="btn btn-light">Register Your Institute</Link>
+              )
+            ) : (
+              <Link to="/register?role=institute" className="btn btn-light">Register Your Institute</Link>
+            )}
           </div>
         </div>
       </section>
@@ -156,11 +187,31 @@ const HomePage = () => {
         <div className="container">
           <h2>Browse by Category</h2>
           <div className="categories-grid">
-            <Link to="/institutes?category=school" className="category-card"><span className="category-icon">🏫</span><h3>Schools</h3><p>CBSE, ICSE, State Boards</p></Link>
-            <Link to="/institutes?category=college" className="category-card"><span className="category-icon">🎓</span><h3>Colleges</h3><p>Engineering, Medical, Arts</p></Link>
-            <Link to="/institutes?category=university" className="category-card"><span className="category-icon">🏛️</span><h3>Universities</h3><p>Public and Private</p></Link>
-            <Link to="/institutes?category=coaching" className="category-card"><span className="category-icon">📚</span><h3>Coaching</h3><p>IIT-JEE, NEET, UPSC</p></Link>
-            <Link to="/institutes?category=preschool" className="category-card"><span className="category-icon">👶</span><h3>Preschools</h3><p>Playgroups, Kindergarten</p></Link>
+            <Link to="/institutes?category=school" className="category-card">
+              <span className="category-icon">🏫</span>
+              <h3>Schools</h3>
+              <p>CBSE, ICSE, State Boards</p>
+            </Link>
+            <Link to="/institutes?category=college" className="category-card">
+              <span className="category-icon">🎓</span>
+              <h3>Colleges</h3>
+              <p>Engineering, Medical, Arts</p>
+            </Link>
+            <Link to="/institutes?category=university" className="category-card">
+              <span className="category-icon">🏛️</span>
+              <h3>Universities</h3>
+              <p>Public and Private</p>
+            </Link>
+            <Link to="/institutes?category=coaching" className="category-card">
+              <span className="category-icon">📚</span>
+              <h3>Coaching</h3>
+              <p>IIT-JEE, NEET, UPSC</p>
+            </Link>
+            <Link to="/institutes?category=preschool" className="category-card">
+              <span className="category-icon">👶</span>
+              <h3>Preschools</h3>
+              <p>Playgroups, Kindergarten</p>
+            </Link>
           </div>
         </div>
       </section>

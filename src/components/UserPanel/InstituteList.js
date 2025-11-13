@@ -1,3 +1,4 @@
+// src/pages/InstituteList.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { instituteService } from '../../services/institute';
@@ -36,7 +37,7 @@ const InstituteList = () => {
     } catch (err) {
       console.error('Error fetching institutes:', err);
       setError(err.message || 'Failed to fetch institutes');
-      setInstitutes([]); // Ensure array state on error
+      setInstitutes([]);
     } finally {
       setLoading(false);
     }
@@ -65,11 +66,10 @@ const InstituteList = () => {
     return image.url.replace('http://', 'https://');
   };
 
-  // FIX: Added debugging to see what we're receiving
+  // Debugging
   useEffect(() => {
     console.log('Institutes data:', institutes);
     console.log('Is array?', Array.isArray(institutes));
-    console.log('Type:', typeof institutes);
   }, [institutes]);
 
   return (
