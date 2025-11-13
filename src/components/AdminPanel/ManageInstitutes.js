@@ -12,9 +12,15 @@ const ManageInstitutes = () => {
   const fetchInstitutes = async () => {
     try {
       const data = await adminService.getPendingInstitutes();
-      setInstitutes(data);
+      // FIX: Ensure institutes is always an array with multiple fallbacks
+      const institutesData = Array.isArray(data) ? data : 
+                           data?.institutes ? data.institutes : 
+                           data?.data ? data.data : [];
+      setInstitutes(institutesData);
     } catch (error) {
       console.error('Error fetching institutes:', error);
+      // FIX: Set empty array on error to prevent crashes
+      setInstitutes([]);
     } finally {
       setLoading(false);
     }
@@ -23,7 +29,12 @@ const ManageInstitutes = () => {
   const handleStatusUpdate = async (instituteId, status) => {
     try {
       await adminService.updateInstituteStatus(instituteId, status);
-      setInstitutes(institutes.filter(inst => inst._id !== instituteId));
+      // FIX: Added array safety check before filtering
+      setInstitutes(prevInstitutes => 
+        Array.isArray(prevInstitutes) 
+          ? prevInstitutes.filter(inst => inst._id !== instituteId)
+          : []
+      );
       alert(`Institute ${status} successfully`);
     } catch (error) {
       console.error('Error updating institute status:', error);
@@ -43,53 +54,58 @@ const ManageInstitutes = () => {
       </div>
 
       <div className="institutes-list">
-        {institutes.length === 0 ? (
+        {/* FIX: Enhanced empty state check */}
+        {!institutes || !Array.isArray(institutes) || institutes.length === 0 ? (
           <div className="empty-state">
             <p>No institutes pending approval</p>
           </div>
         ) : (
-          institutes.map(institute => (
-            <div key={institute._id} className="institute-card">
+          // FIX: Added array safety check before mapping
+          Array.isArray(institutes) && institutes.map(institute => (
+            <div key={institute._id || institute.id} className="institute-card">
               <div className="institute-header">
-                <h3>{institute.name}</h3>
-                <span className={`status-badge ${institute.status}`}>
-                  {institute.status}
+                <h3>{institute.name || 'Unnamed Institute'}</h3>
+                <span className={`status-badge ${institute.status || 'pending'}`}>
+                  {institute.status || 'pending'}
                 </span>
               </div>
               
               <div className="institute-details">
                 <div className="detail-row">
                   <span className="label">Category:</span>
-                  <span className="value">{institute.category}</span>
+                  <span className="value">{institute.category || 'Not specified'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Affiliation:</span>
-                  <span className="value">{institute.affiliation}</span>
+                  <span className="value">{institute.affiliation || 'Not specified'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Contact:</span>
-                  <span className="value">{institute.contact?.email} | {institute.contact?.phone}</span>
+                  <span className="value">
+                    {institute.contact?.email || 'No email'} | {institute.contact?.phone || 'No phone'}
+                  </span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Address:</span>
                   <span className="value">
-                    {institute.address?.city}, {institute.address?.state}
+                    {institute.address?.city || 'Unknown city'}, {institute.address?.state || 'Unknown state'}
                   </span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Description:</span>
-                  <span className="value">{institute.description}</span>
+                  <span className="value">{institute.description || 'No description provided'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Registered by:</span>
                   <span className="value">
-                    {institute.user?.name} ({institute.user?.email})
+                    {institute.user?.name || 'Unknown user'} ({institute.user?.email || 'No email'})
                   </span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Registration Date:</span>
                   <span className="value">
-                    {new Date(institute.createdAt).toLocaleDateString()}
+                    {/* FIX: Added safety check for date */}
+                    {institute.createdAt ? new Date(institute.createdAt).toLocaleDateString() : 'Unknown date'}
                   </span>
                 </div>
               </div>

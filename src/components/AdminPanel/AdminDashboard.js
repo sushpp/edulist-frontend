@@ -21,10 +21,17 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const data = await adminService.getDashboardAnalytics();
-      setAnalytics(data.analytics);
-      setRecentActivities(data.recentActivities);
+      // FIX: Ensure analytics and recentActivities are always objects with proper structure
+      const safeAnalytics = data?.analytics || data?.data?.analytics || {};
+      const safeRecentActivities = data?.recentActivities || data?.data?.recentActivities || {};
+      
+      setAnalytics(safeAnalytics);
+      setRecentActivities(safeRecentActivities);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // FIX: Set default empty objects on error
+      setAnalytics({});
+      setRecentActivities({});
     } finally {
       setLoading(false);
     }
@@ -57,7 +64,7 @@ const AdminDashboard = () => {
           </button>
           <h1>Admin Dashboard</h1>
           <div className="user-info">
-            <span>Welcome, {user?.name}</span>
+            <span>Welcome, {user?.name || 'Admin'}</span>
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
@@ -151,15 +158,16 @@ const AdminDashboard = () => {
               <div className="activity-section">
                 <h3>New Users</h3>
                 <div className="activity-list">
-                  {recentActivities.newUsers?.length > 0 ? (
+                  {/* FIX: Added array safety check for newUsers */}
+                  {recentActivities.newUsers && Array.isArray(recentActivities.newUsers) && recentActivities.newUsers.length > 0 ? (
                     recentActivities.newUsers.map(user => (
-                      <div key={user._id} className="activity-item">
+                      <div key={user._id || user.id} className="activity-item">
                         <div className="activity-avatar">
                           {user.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         <div className="activity-details">
-                          <p><strong>{user.name}</strong> registered</p>
-                          <small>{new Date(user.createdAt).toLocaleDateString()}</small>
+                          <p><strong>{user.name || 'Unknown User'}</strong> registered</p>
+                          <small>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}</small>
                         </div>
                       </div>
                     ))
@@ -174,15 +182,16 @@ const AdminDashboard = () => {
               <div className="activity-section">
                 <h3>Pending Institutes</h3>
                 <div className="activity-list">
-                  {recentActivities.pendingInstitutes?.length > 0 ? (
+                  {/* FIX: Added array safety check for pendingInstitutes */}
+                  {recentActivities.pendingInstitutes && Array.isArray(recentActivities.pendingInstitutes) && recentActivities.pendingInstitutes.length > 0 ? (
                     recentActivities.pendingInstitutes.map(institute => (
-                      <div key={institute._id} className="activity-item">
+                      <div key={institute._id || institute.id} className="activity-item">
                         <div className="activity-avatar">
                           {institute.name?.charAt(0).toUpperCase() || 'I'}
                         </div>
                         <div className="activity-details">
-                          <p><strong>{institute.name}</strong> waiting approval</p>
-                          <small>{institute.category} • {institute.affiliation}</small>
+                          <p><strong>{institute.name || 'Unnamed Institute'}</strong> waiting approval</p>
+                          <small>{institute.category || 'Unknown category'} • {institute.affiliation || 'No affiliation'}</small>
                         </div>
                       </div>
                     ))
@@ -197,21 +206,23 @@ const AdminDashboard = () => {
               <div className="activity-section">
                 <h3>Recent Reviews</h3>
                 <div className="activity-list">
-                  {recentActivities.recentReviews?.length > 0 ? (
+                  {/* FIX: Added array safety check for recentReviews */}
+                  {recentActivities.recentReviews && Array.isArray(recentActivities.recentReviews) && recentActivities.recentReviews.length > 0 ? (
                     recentActivities.recentReviews.map(review => (
-                      <div key={review._id} className="activity-item">
+                      <div key={review._id || review.id} className="activity-item">
                         <div className="activity-avatar">
                           {review.user?.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         <div className="activity-details">
                           <p>
-                            <strong>{review.user?.name}</strong> reviewed 
-                            <strong> {review.institute?.name}</strong>
+                            <strong>{review.user?.name || 'Anonymous'}</strong> reviewed 
+                            <strong> {review.institute?.name || 'Unknown Institute'}</strong>
                           </p>
                           <div className="rating">
-                            {'⭐'.repeat(review.rating)}
+                            {/* FIX: Added safety check for rating */}
+                            {'⭐'.repeat(review.rating || 0)}
                           </div>
-                          <small>{new Date(review.createdAt).toLocaleDateString()}</small>
+                          <small>{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Unknown date'}</small>
                         </div>
                       </div>
                     ))

@@ -27,8 +27,11 @@ const CourseManagement = () => {
   const fetchCourses = async () => {
     try {
       const data = await courseService.getCoursesByInstitute();
-      // The service now correctly extracts the array, so this is safer
-      setCourses(Array.isArray(data) ? data : []);
+      // FIX: Enhanced array safety with multiple fallbacks
+      const coursesData = Array.isArray(data) ? data : 
+                         data?.courses ? data.courses : 
+                         data?.data ? data.data : [];
+      setCourses(coursesData);
     } catch (error) {
       console.error('Error fetching courses:', error);
       // Set to empty array on error to prevent crashes
@@ -73,14 +76,16 @@ const CourseManagement = () => {
   const handleEdit = (course) => {
     setEditingCourse(course);
     setFormData({
-      title: course.title,
-      description: course.description,
-      duration: course.duration,
-      fees: course.fees,
-      category: course.category,
-      facilities: course.facilities || [],
+      title: course.title || '',
+      description: course.description || '',
+      duration: course.duration || '',
+      fees: course.fees || '',
+      category: course.category || '',
+      // FIX: Ensure facilities is always an array
+      facilities: Array.isArray(course.facilities) ? course.facilities : [],
       eligibility: course.eligibility || '',
-      syllabus: course.syllabus || [],
+      // FIX: Ensure syllabus is always an array
+      syllabus: Array.isArray(course.syllabus) ? course.syllabus : [],
       image: null
     });
     setImagePreview(course.imageUrl || null);
@@ -115,21 +120,28 @@ const CourseManagement = () => {
   const addFacility = () => {
     setFormData(prev => ({
       ...prev,
-      facilities: [...prev.facilities, '']
+      // FIX: Ensure facilities is always an array before spreading
+      facilities: [...(Array.isArray(prev.facilities) ? prev.facilities : []), '']
     }));
   };
 
   const updateFacility = (index, value) => {
     setFormData(prev => ({
       ...prev,
-      facilities: prev.facilities.map((fac, i) => i === index ? value : fac)
+      // FIX: Added array safety check
+      facilities: Array.isArray(prev.facilities) 
+        ? prev.facilities.map((fac, i) => i === index ? value : fac)
+        : []
     }));
   };
 
   const removeFacility = (index) => {
     setFormData(prev => ({
       ...prev,
-      facilities: prev.facilities.filter((_, i) => i !== index)
+      // FIX: Added array safety check
+      facilities: Array.isArray(prev.facilities) 
+        ? prev.facilities.filter((_, i) => i !== index)
+        : []
     }));
   };
 
@@ -175,8 +187,7 @@ const CourseManagement = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="course-form">
-              {/* ... (form fields remain the same) ... */}
-               <div className="form-grid">
+              <div className="form-grid">
                 <div className="form-group">
                   <label>Course Title *</label>
                   <input
@@ -262,7 +273,8 @@ const CourseManagement = () => {
 
               <div className="form-group">
                 <label>Facilities</label>
-                {formData.facilities.map((facility, index) => (
+                {/* FIX: Added array safety check for facilities mapping */}
+                {Array.isArray(formData.facilities) && formData.facilities.map((facility, index) => (
                   <div key={index} className="facility-input">
                     <input
                       type="text"
@@ -315,7 +327,8 @@ const CourseManagement = () => {
 
       {/* Courses List */}
       <div className="courses-list">
-        {courses.length === 0 ? (
+        {/* FIX: Enhanced empty state check */}
+        {!courses || courses.length === 0 ? (
           <div className="empty-state">
             <p>No courses added yet</p>
             <button 
@@ -327,10 +340,11 @@ const CourseManagement = () => {
           </div>
         ) : (
           <div className="courses-grid">
-            {courses && Array.isArray(courses) && courses.map(course => (
-              <div key={course._id} className="course-card">
+            {/* FIX: Added comprehensive array safety check */}
+            {Array.isArray(courses) && courses.map(course => (
+              <div key={course._id || course.id} className="course-card">
                 <div className="course-header">
-                  <h3>{course.title}</h3>
+                  <h3>{course.title || 'Untitled Course'}</h3>
                   <div className="course-actions">
                     <button 
                       onClick={() => handleEdit(course)}
@@ -364,12 +378,13 @@ const CourseManagement = () => {
                   )}
                 </div>
 
-                {course.facilities && course.facilities.length > 0 && (
+                {/* FIX: Enhanced facilities safety check */}
+                {course.facilities && Array.isArray(course.facilities) && course.facilities.length > 0 && (
                   <div className="course-facilities">
                     <strong>Facilities:</strong>
                     <div className="facilities-tags">
-                      {/* === 🔥 NEW SAFETY CHECK ADDED HERE === */}
-                      {course.facilities && Array.isArray(course.facilities) && course.facilities.map((facility, index) => (
+                      {/* FIX: Added array safety check for nested mapping */}
+                      {Array.isArray(course.facilities) && course.facilities.map((facility, index) => (
                         <span key={index} className="facility-tag">
                           {facility}
                         </span>

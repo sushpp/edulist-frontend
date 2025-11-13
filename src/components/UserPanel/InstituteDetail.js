@@ -34,31 +34,42 @@ const InstituteDetail = () => {
   const fetchInstituteDetail = async () => {
     try {
       setError('');
-      const institutes = await instituteService.getAllInstitutes();
-      const foundInstitute = institutes.find(inst => inst._id === id);
+      const response = await instituteService.getAllInstitutes();
+      
+      // FIX: Safely handle the response
+      const institutesData = response?.institutes || response?.data || response || [];
+      
+      if (Array.isArray(institutesData)) {
+        const foundInstitute = institutesData.find(inst => inst._id === id);
 
-      if (foundInstitute) {
-        setInstitute(foundInstitute);
+        if (foundInstitute) {
+          setInstitute(foundInstitute);
 
-        // Fetch courses
-        try {
-          const coursesData = await courseService.getInstituteCourses(id);
-          setCourses(coursesData);
-        } catch (courseError) {
-          console.log('No courses found');
-          setCourses([]);
-        }
+          // Fetch courses
+          try {
+            const coursesData = await courseService.getInstituteCourses(id);
+            // FIX: Ensure courses is always an array
+            setCourses(Array.isArray(coursesData) ? coursesData : []);
+          } catch (courseError) {
+            console.log('No courses found');
+            setCourses([]);
+          }
 
-        // Fetch reviews
-        try {
-          const reviewsData = await reviewService.getInstituteReviews(id);
-          setReviews(reviewsData);
-        } catch (reviewError) {
-          console.log('No reviews found');
-          setReviews([]);
+          // Fetch reviews
+          try {
+            const reviewsData = await reviewService.getInstituteReviews(id);
+            // FIX: Ensure reviews is always an array
+            setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+          } catch (reviewError) {
+            console.log('No reviews found');
+            setReviews([]);
+          }
+        } else {
+          setError('Institute not found');
         }
       } else {
-        setError('Institute not found');
+        console.warn('Expected array of institutes but got:', typeof institutesData);
+        setError('Invalid data format received');
       }
     } catch (error) {
       console.error('Error fetching institute details:', error);
@@ -91,15 +102,15 @@ const InstituteDetail = () => {
   };
 
   const getAverageRating = () => {
-    if (!reviews || reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+    if (!reviews || !Array.isArray(reviews) || reviews.length === 0) return 0;
+    const sum = reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
     return (sum / reviews.length).toFixed(1);
   };
 
   // Get all images including primary
   const getAllImages = () => {
     if (!institute) return [];
-    return institute.images || [];
+    return Array.isArray(institute.images) ? institute.images : [];
   };
 
   // Get image URL dynamically
@@ -143,7 +154,7 @@ const InstituteDetail = () => {
                   className="header-logo-large"
                 />
               ) : (
-                <span className="header-initial">{institute.name.charAt(0).toUpperCase()}</span>
+                <span className="header-initial">{institute.name?.charAt(0).toUpperCase() || 'I'}</span>
               )}
             </div>
           )}
@@ -200,7 +211,7 @@ const InstituteDetail = () => {
           Courses ({courses.length})
         </button>
         <button className={`tab ${activeTab === 'facilities' ? 'active' : ''}`} onClick={() => setActiveTab('facilities')}>
-          Facilities ({institute.facilities?.length || 0})
+          Facilities ({Array.isArray(institute.facilities) ? institute.facilities.length : 0})
         </button>
         <button className={`tab ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => setActiveTab('gallery')}>
           Gallery ({allImages.length})
@@ -251,7 +262,8 @@ const InstituteDetail = () => {
               </div>
             ) : (
               <div className="courses-grid">
-                {courses.map(course => (
+                {/* FIX: Added array safety check */}
+                {Array.isArray(courses) && courses.map(course => (
                   <div key={course._id} className="course-card">
                     <h4>{course.title}</h4>
                     <p className="course-description">{course.description}</p>
@@ -261,10 +273,15 @@ const InstituteDetail = () => {
                       {course.eligibility && <div className="detail-item"><strong>Eligibility:</strong> {course.eligibility}</div>}
                       {course.category && <div className="detail-item"><strong>Category:</strong> {course.category}</div>}
                     </div>
-                    {course.facilities && course.facilities.length > 0 && (
+                    {course.facilities && Array.isArray(course.facilities) && course.facilities.length > 0 && (
                       <div className="course-facilities">
                         <strong>Facilities:</strong>
-                        <div className="facilities-tags">{course.facilities.map((facility, idx) => <span key={idx} className="facility-tag">{facility}</span>)}</div>
+                        <div className="facilities-tags">
+                          {/* FIX: Added array safety check */}
+                          {Array.isArray(course.facilities) && course.facilities.map((facility, idx) => (
+                            <span key={idx} className="facility-tag">{facility}</span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -278,15 +295,18 @@ const InstituteDetail = () => {
         {activeTab === 'facilities' && (
           <div className="facilities-tab">
             <h3>Facilities & Infrastructure</h3>
-            {(!institute.facilities || institute.facilities.length === 0) ? (
+            {(!institute.facilities || !Array.isArray(institute.facilities) || institute.facilities.length === 0) ? (
               <div className="empty-state"><p>No facilities information available yet.</p></div>
             ) : (
-              <div className="facilities-grid">{institute.facilities.map((f, idx) => (
-                <div key={idx} className="facility-item">
-                  <h4>{f.name}</h4>
-                  {f.description && <p>{f.description}</p>}
-                </div>
-              ))}</div>
+              <div className="facilities-grid">
+                {/* FIX: Added array safety check */}
+                {Array.isArray(institute.facilities) && institute.facilities.map((f, idx) => (
+                  <div key={idx} className="facility-item">
+                    <h4>{f.name}</h4>
+                    {f.description && <p>{f.description}</p>}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -300,13 +320,16 @@ const InstituteDetail = () => {
                 <p>No images available for this institute.</p>
               </div>
             ) : (
-              <div className="gallery-grid">{allImages.map((image, idx) => (
-                <div key={idx} className="gallery-item">
-                  <img src={getImageUrl(image)} alt={`${institute.name} Image ${idx + 1}`} onClick={() => setSelectedImageIndex(idx)} />
-                  {image.type === 'logo' && <div className="image-badge">Logo</div>}
-                  {image.isPrimary && image.type !== 'logo' && <div className="image-badge primary">Primary</div>}
-                </div>
-              ))}</div>
+              <div className="gallery-grid">
+                {/* FIX: Added array safety check */}
+                {Array.isArray(allImages) && allImages.map((image, idx) => (
+                  <div key={idx} className="gallery-item">
+                    <img src={getImageUrl(image)} alt={`${institute.name} Image ${idx + 1}`} onClick={() => setSelectedImageIndex(idx)} />
+                    {image.type === 'logo' && <div className="image-badge">Logo</div>}
+                    {image.isPrimary && image.type !== 'logo' && <div className="image-badge primary">Primary</div>}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -322,7 +345,8 @@ const InstituteDetail = () => {
                   {user && <button onClick={() => setShowReviewForm(true)} className="btn btn-primary">Write First Review</button>}
                 </div>
               ) : (
-                reviews.map(review => (
+                // FIX: Added array safety check
+                Array.isArray(reviews) && reviews.map(review => (
                   <div key={review._id} className="review-card">
                     <div className="review-header">
                       <div className="reviewer-info">

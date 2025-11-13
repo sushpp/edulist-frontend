@@ -15,23 +15,38 @@ export const instituteService = {
       const response = await api.get(requestUrl);
       const data = response.data;
       
-      // Normalize response to ensure it always has the expected structure
+      // FIX: Enhanced response normalization with better debugging
+      console.log('🔍 Institute API Response:', data); // Debug log
+      
+      // Handle various response formats and always return { institutes: array }
       if (Array.isArray(data)) {
-        // If the API returned a direct array, wrap it in an object
+        console.log('📦 API returned direct array');
         return { institutes: data };
       } else if (data && Array.isArray(data.institutes)) {
-        // If the API returned the expected object, use it as is
+        console.log('📦 API returned { institutes: array }');
         return data;
       } else if (data && data.data && Array.isArray(data.data)) {
-        // Handle case where data is nested in a data property
+        console.log('📦 API returned { data: array }');
         return { institutes: data.data };
-      } else {
-        // If the response is something else, return an empty array to prevent crashes
-        console.warn('Unexpected API response format. Returning empty array.');
-        return { institutes: [] };
+      } else if (data && data.data && Array.isArray(data.data.institutes)) {
+        console.log('📦 API returned { data: { institutes: array } }');
+        return { institutes: data.data.institutes };
+      } else if (data && typeof data === 'object') {
+        // Try to find any array property in the response
+        const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]));
+        if (arrayKeys.length > 0) {
+          console.log(`📦 Found array in property: ${arrayKeys[0]}`);
+          return { institutes: data[arrayKeys[0]] };
+        }
       }
+      
+      // If no array found, return empty array
+      console.warn('❌ Unexpected API response format. No array found. Returning empty array.');
+      console.warn('Response structure:', typeof data, data);
+      return { institutes: [] };
+      
     } catch (error) {
-      console.error('Error fetching institutes:', error);
+      console.error('❌ Error fetching institutes:', error);
       
       // Check for the specific Axios timeout error code
       if (error.code === 'ECONNABORTED') {
@@ -48,7 +63,6 @@ export const instituteService = {
     }
   },
 
-  // ... all your other methods are correct, keep them as is.
   getInstituteById: async (id) => {
     try {
       const response = await api.get(`/institutes/${id}`);
@@ -66,7 +80,10 @@ export const instituteService = {
   getInstituteProfile: async () => {
     try {
       const response = await api.get('/institutes/profile');
-      return response.data;
+      // FIX: Ensure consistent response format
+      const data = response.data;
+      console.log('🔍 Institute Profile API Response:', data);
+      return data;
     } catch (error) {
       console.error('Error fetching institute profile:', error);
       if (error.response?.status === 401) {
@@ -91,7 +108,10 @@ export const instituteService = {
   addFacility: async (facility) => {
     try {
       const response = await api.post('/institutes/facilities', facility);
-      return response.data;
+      // FIX: Ensure consistent response format
+      const data = response.data;
+      console.log('🔍 Add Facility API Response:', data);
+      return data;
     } catch (error) {
       console.error('Error adding facility:', error);
       const errorMessage = error.response?.data?.message || 'Failed to add facility';
@@ -102,11 +122,37 @@ export const instituteService = {
   removeFacility: async (facilityId) => {
     try {
       const response = await api.delete(`/institutes/facilities/${facilityId}`);
-      return response.data;
+      // FIX: Ensure consistent response format
+      const data = response.data;
+      console.log('🔍 Remove Facility API Response:', data);
+      return data;
     } catch (error) {
       console.error('Error removing facility:', error);
       const errorMessage = error.response?.data?.message || 'Failed to remove facility';
       throw new Error(errorMessage);
+    }
+  },
+
+  // FIX: Added a test method to check API response format
+  testApiResponse: async () => {
+    try {
+      const response = await api.get('/institutes/public');
+      console.log('🧪 TEST - Raw API Response:', response);
+      console.log('🧪 TEST - Response Data:', response.data);
+      console.log('🧪 TEST - Data Type:', typeof response.data);
+      console.log('🧪 TEST - Is Array?:', Array.isArray(response.data));
+      
+      if (response.data && typeof response.data === 'object') {
+        console.log('🧪 TEST - Object Keys:', Object.keys(response.data));
+        Object.keys(response.data).forEach(key => {
+          console.log(`🧪 TEST - Key "${key}":`, typeof response.data[key], Array.isArray(response.data[key]));
+        });
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('🧪 TEST - Error:', error);
+      throw error;
     }
   }
 };

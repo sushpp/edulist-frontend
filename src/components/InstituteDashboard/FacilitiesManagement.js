@@ -18,15 +18,18 @@ const FacilitiesManagement = () => {
   const fetchInstituteData = async () => {
     try {
       const institute = await instituteService.getInstituteProfile();
-      setFacilities(institute.facilities || []);
+      // FIX: Ensure facilities is always an array
+      const facilitiesData = institute?.facilities || institute?.data?.facilities || [];
+      setFacilities(Array.isArray(facilitiesData) ? facilitiesData : []);
     } catch (error) {
       console.error('Error fetching institute data:', error);
-      // Use mock facilities
-      setFacilities([
+      // FIX: Use mock facilities with proper array structure
+      const mockFacilities = [
         { _id: '1', name: 'Library', description: 'Well-stocked library with 50,000+ books' },
         { _id: '2', name: 'Sports Complex', description: 'Olympic-sized swimming pool and indoor stadium' },
         { _id: '3', name: 'Science Labs', description: 'Fully equipped physics, chemistry, and biology laboratories' }
-      ]);
+      ];
+      setFacilities(mockFacilities);
     }
   };
 
@@ -42,7 +45,9 @@ const FacilitiesManagement = () => {
     
     try {
       const result = await instituteService.addFacility(formData);
-      setFacilities(result.facilities || [...facilities, { ...formData, _id: Date.now().toString() }]);
+      // FIX: Safely handle the response and ensure facilities is always an array
+      const newFacilities = result?.facilities || result?.data?.facilities || [...facilities, { ...formData, _id: Date.now().toString() }];
+      setFacilities(Array.isArray(newFacilities) ? newFacilities : []);
       setFormData({ name: '', description: '' });
       setShowForm(false);
       setMessage('Facility added successfully!');
@@ -59,7 +64,9 @@ const FacilitiesManagement = () => {
     if (window.confirm('Are you sure you want to remove this facility?')) {
       try {
         const result = await instituteService.removeFacility(facilityId);
-        setFacilities(result.facilities || facilities.filter(fac => fac._id !== facilityId));
+        // FIX: Safely handle the response and ensure facilities is always an array
+        const updatedFacilities = result?.facilities || result?.data?.facilities || facilities.filter(fac => fac._id !== facilityId);
+        setFacilities(Array.isArray(updatedFacilities) ? updatedFacilities : []);
         setMessage('Facility removed successfully!');
         setTimeout(() => setMessage(''), 3000);
       } catch (error) {
@@ -140,16 +147,18 @@ const FacilitiesManagement = () => {
       <div className="facilities-list">
         <h3>Current Facilities ({facilities.length})</h3>
         
-        {facilities.length === 0 ? (
+        {/* FIX: Enhanced empty state check */}
+        {!facilities || facilities.length === 0 ? (
           <div className="empty-state">
             <p>No facilities added yet. Add your first facility to showcase what your institute offers.</p>
           </div>
         ) : (
           <div className="facilities-grid">
-            {facilities.map((facility) => (
+            {/* FIX: Added array safety check before mapping */}
+            {Array.isArray(facilities) && facilities.map((facility) => (
               <div key={facility._id} className="facility-card">
                 <div className="facility-content">
-                  <h4>{facility.name}</h4>
+                  <h4>{facility.name || 'Unnamed Facility'}</h4>
                   {facility.description && (
                     <p>{facility.description}</p>
                   )}

@@ -11,7 +11,7 @@ const ProfileManagement = () => {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState('');
-  const [uploading, setUploading] = useState(false); // Corrected typo from 'uploading'
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchInstituteProfile();
@@ -20,13 +20,26 @@ const ProfileManagement = () => {
   const fetchInstituteProfile = async () => {
     try {
       const data = await instituteService.getInstituteProfile();
-      setInstitute(data);
-      setFormData(data);
+      // FIX: Ensure data is an object and has proper structure
+      const safeData = data || {};
+      setInstitute(safeData);
+      setFormData(safeData);
     } catch (error) {
       console.error('Error fetching institute profile:', error);
       setMessage('Error loading profile');
-      // === FIX 1: Set a default object on error to prevent blank screen ===
-      setInstitute({});
+      // Set a default object with proper structure
+      const defaultInstitute = {
+        name: '',
+        category: '',
+        affiliation: '',
+        description: '',
+        contact: {},
+        address: {},
+        images: [],
+        logo: null
+      };
+      setInstitute(defaultInstitute);
+      setFormData(defaultInstitute);
     } finally {
       setLoading(false);
     }
@@ -39,7 +52,6 @@ const ProfileManagement = () => {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
         ...prev,
-        // === FIX 2: Add fallback for nested objects to prevent crash ===
         [parent]: {
           ...(prev[parent] || {}),
           [child]: value
@@ -79,8 +91,13 @@ const ProfileManagement = () => {
       if (imageType === 'logo') {
         setFormData(prev => ({ ...prev, logo: imageData }));
       } else if (imageType === 'institute') {
-        const newImage = { ...imageData, isPrimary: formData.images?.length === 0 };
-        setFormData(prev => ({ ...prev, images: [...(prev.images || []), newImage] }));
+        // FIX: Ensure images is always an array
+        const currentImages = Array.isArray(prev.images) ? prev.images : [];
+        const newImage = { ...imageData, isPrimary: currentImages.length === 0 };
+        setFormData(prev => ({ 
+          ...prev, 
+          images: [...currentImages, newImage] 
+        }));
       }
 
       setMessage('Image uploaded successfully!');
@@ -97,14 +114,21 @@ const ProfileManagement = () => {
     if (imageType === 'logo') {
       setFormData(prev => ({ ...prev, logo: null }));
     } else if (imageType === 'institute') {
-      setFormData(prev => ({ ...prev, images: prev.images?.filter((_, i) => i !== index) }));
+      // FIX: Added array safety check
+      setFormData(prev => ({ 
+        ...prev, 
+        images: Array.isArray(prev.images) ? prev.images.filter((_, i) => i !== index) : [] 
+      }));
     }
   };
 
   const setPrimaryImage = (index) => {
     setFormData(prev => ({
       ...prev,
-      images: prev.images?.map((img, i) => ({ ...img, isPrimary: i === index }))
+      // FIX: Added array safety check
+      images: Array.isArray(prev.images) 
+        ? prev.images.map((img, i) => ({ ...img, isPrimary: i === index }))
+        : []
     }));
   };
 
@@ -126,7 +150,7 @@ const ProfileManagement = () => {
     }
   };
 
-  // === FIX 3: Force HTTPS to prevent Mixed Content warnings ===
+  // FIX: Force HTTPS to prevent Mixed Content warnings
   const getImageUrl = (image) => {
     if (!image?.url) return '';
     return image.url.replace('http://', 'https://');
@@ -147,7 +171,8 @@ const ProfileManagement = () => {
         <div className={`message ${message.includes('Error') ? 'error' : 'success'}`}>{message}</div>
       )}
 
-      {institute && (
+      {/* FIX: Added safety check for institute data */}
+      {(institute || formData) && (
         <form onSubmit={handleSubmit} className="profile-form">
           {/* Logo Upload */}
           <div className="form-section">
@@ -184,19 +209,29 @@ const ProfileManagement = () => {
             <h3>Institute Images</h3>
             <div className="image-upload-section">
               <div className="current-images">
-                {/* === FIX 4: Added safety check before .map() === */}
+                {/* FIX: Enhanced safety check for images array */}
                 {formData.images && Array.isArray(formData.images) && formData.images.length > 0 ? (
                   <div className="images-grid">
+                    {/* FIX: Added key prop and safety checks */}
                     {formData.images.map((image, index) => (
-                      <div key={index} className={`image-preview ${image.isPrimary ? 'primary' : ''}`}>
+                      <div key={image._id || image.filename || index} className={`image-preview ${image.isPrimary ? 'primary' : ''}`}>
                         <img src={getImageUrl(image)} alt={`Institute ${index + 1}`} />
                         {image.isPrimary && <span className="primary-badge">Primary</span>}
                         {editing && (
                           <div className="image-actions">
-                            <button type="button" onClick={() => setPrimaryImage(index)} disabled={image.isPrimary}>
+                            <button 
+                              type="button" 
+                              onClick={() => setPrimaryImage(index)} 
+                              disabled={image.isPrimary}
+                            >
                               Set Primary
                             </button>
-                            <button type="button" onClick={() => removeImage(index, 'institute')}>Remove</button>
+                            <button 
+                              type="button" 
+                              onClick={() => removeImage(index, 'institute')}
+                            >
+                              Remove
+                            </button>
                           </div>
                         )}
                       </div>
@@ -210,7 +245,14 @@ const ProfileManagement = () => {
                 <div className="upload-controls">
                   <label className="upload-btn">
                     {uploading ? 'Uploading...' : 'Add Images'}
-                    <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'institute')} disabled={uploading} style={{ display: 'none' }} />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple 
+                      onChange={(e) => handleImageUpload(e, 'institute')} 
+                      disabled={uploading} 
+                      style={{ display: 'none' }} 
+                    />
                   </label>
                   <small>Upload multiple images to showcase your institute</small>
                 </div>
@@ -218,17 +260,29 @@ const ProfileManagement = () => {
             </div>
           </div>
 
-          {/* Basic Info, Contact, Address, Description */}
+          {/* Basic Info */}
           <div className="form-section">
             <h3>Basic Information</h3>
             <div className="form-grid">
               <div className="form-group">
                 <label>Institute Name</label>
-                <input type="text" name="name" value={formData.name || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="text" 
+                  name="name" 
+                  value={formData.name || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
               <div className="form-group">
                 <label>Category</label>
-                <select name="category" value={formData.category || ''} onChange={handleChange} disabled={!editing}>
+                <select 
+                  name="category" 
+                  value={formData.category || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing}
+                >
+                  <option value="">Select Category</option>
                   <option value="school">School</option>
                   <option value="college">College</option>
                   <option value="university">University</option>
@@ -238,55 +292,113 @@ const ProfileManagement = () => {
               </div>
               <div className="form-group">
                 <label>Affiliation</label>
-                <input type="text" name="affiliation" value={formData.affiliation || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="text" 
+                  name="affiliation" 
+                  value={formData.affiliation || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
             </div>
           </div>
 
+          {/* Contact Information */}
           <div className="form-section">
             <h3>Contact Information</h3>
             <div className="form-grid">
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" name="contact.email" value={formData.contact?.email || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="email" 
+                  name="contact.email" 
+                  value={formData.contact?.email || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
               <div className="form-group">
                 <label>Phone</label>
-                <input type="tel" name="contact.phone" value={formData.contact?.phone || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="tel" 
+                  name="contact.phone" 
+                  value={formData.contact?.phone || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
               <div className="form-group">
                 <label>Website</label>
-                <input type="url" name="contact.website" value={formData.contact?.website || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="url" 
+                  name="contact.website" 
+                  value={formData.contact?.website || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
             </div>
           </div>
 
+          {/* Address */}
           <div className="form-section">
             <h3>Address</h3>
             <div className="form-grid">
               <div className="form-group">
                 <label>Street</label>
-                <input type="text" name="address.street" value={formData.address?.street || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="text" 
+                  name="address.street" 
+                  value={formData.address?.street || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
               <div className="form-group">
                 <label>City</label>
-                <input type="text" name="address.city" value={formData.address?.city || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="text" 
+                  name="address.city" 
+                  value={formData.address?.city || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
               <div className="form-group">
                 <label>State</label>
-                <input type="text" name="address.state" value={formData.address?.state || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="text" 
+                  name="address.state" 
+                  value={formData.address?.state || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
               <div className="form-group">
                 <label>Pincode</label>
-                <input type="text" name="address.pincode" value={formData.address?.pincode || ''} onChange={handleChange} disabled={!editing} />
+                <input 
+                  type="text" 
+                  name="address.pincode" 
+                  value={formData.address?.pincode || ''} 
+                  onChange={handleChange} 
+                  disabled={!editing} 
+                />
               </div>
             </div>
           </div>
 
+          {/* Description */}
           <div className="form-section">
             <h3>Description</h3>
             <div className="form-group">
-              <textarea name="description" value={formData.description || ''} onChange={handleChange} disabled={!editing} rows="4" placeholder="Describe your institute..." />
+              <textarea 
+                name="description" 
+                value={formData.description || ''} 
+                onChange={handleChange} 
+                disabled={!editing} 
+                rows="4" 
+                placeholder="Describe your institute..." 
+              />
             </div>
           </div>
 

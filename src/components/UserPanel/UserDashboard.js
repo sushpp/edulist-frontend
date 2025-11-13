@@ -17,15 +17,27 @@ const UserDashboard = () => {
   const fetchUserData = async () => {
     try {
       // Fetch user's reviews and enquiries
-      const [reviews, enquiries] = await Promise.all([
+      const [reviewsResponse, enquiriesResponse] = await Promise.all([
         reviewService.getUserReviews(),
         enquiryService.getUserEnquiries()
       ]);
       
-      setUserReviews(reviews);
-      setUserEnquiries(enquiries);
+      // FIX: Ensure we always get arrays, even if API returns non-array data
+      const reviewsData = Array.isArray(reviewsResponse) ? reviewsResponse : 
+                         reviewsResponse?.data ? reviewsResponse.data : 
+                         reviewsResponse?.reviews ? reviewsResponse.reviews : [];
+      
+      const enquiriesData = Array.isArray(enquiriesResponse) ? enquiriesResponse : 
+                           enquiriesResponse?.data ? enquiriesResponse.data : 
+                           enquiriesResponse?.enquiries ? enquiriesResponse.enquiries : [];
+      
+      setUserReviews(reviewsData);
+      setUserEnquiries(enquiriesData);
     } catch (error) {
       console.error('Error fetching user data:', error);
+      // FIX: Set empty arrays on error to prevent .map errors
+      setUserReviews([]);
+      setUserEnquiries([]);
     } finally {
       setLoading(false);
     }
@@ -77,7 +89,7 @@ const UserDashboard = () => {
             </Link>
           </div>
           
-          {userReviews.length === 0 ? (
+          {!userReviews || userReviews.length === 0 ? (
             <div className="empty-state">
               <p>You haven't written any reviews yet.</p>
               <Link to="/institutes" className="btn btn-primary">
@@ -86,12 +98,13 @@ const UserDashboard = () => {
             </div>
           ) : (
             <div className="reviews-list">
-              {userReviews.slice(0, 5).map(review => (
+              {/* FIX: Added array safety check before mapping */}
+              {Array.isArray(userReviews) && userReviews.slice(0, 5).map(review => (
                 <div key={review._id} className="review-item">
                   <div className="review-header">
                     <h4>{review.institute?.name}</h4>
                     <div className="rating">
-                      {'⭐'.repeat(review.rating)}
+                      {'⭐'.repeat(review.rating || 0)}
                     </div>
                   </div>
                   <p className="review-text">{review.reviewText}</p>
@@ -113,7 +126,7 @@ const UserDashboard = () => {
             </Link>
           </div>
           
-          {userEnquiries.length === 0 ? (
+          {!userEnquiries || userEnquiries.length === 0 ? (
             <div className="empty-state">
               <p>You haven't sent any enquiries yet.</p>
               <Link to="/institutes" className="btn btn-primary">
@@ -122,7 +135,8 @@ const UserDashboard = () => {
             </div>
           ) : (
             <div className="enquiries-list">
-              {userEnquiries.slice(0, 5).map(enquiry => (
+              {/* FIX: Added array safety check before mapping */}
+              {Array.isArray(userEnquiries) && userEnquiries.slice(0, 5).map(enquiry => (
                 <div key={enquiry._id} className="enquiry-item">
                   <div className="enquiry-header">
                     <h4>{enquiry.institute?.name}</h4>

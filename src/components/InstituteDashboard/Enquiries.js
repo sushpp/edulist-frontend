@@ -14,9 +14,15 @@ const Enquiries = () => {
   const fetchEnquiries = async () => {
     try {
       const data = await enquiryService.getInstituteEnquiries();
-      setEnquiries(data);
+      // FIX: Ensure enquiries is always an array with multiple fallbacks
+      const enquiriesData = Array.isArray(data) ? data : 
+                           data?.enquiries ? data.enquiries : 
+                           data?.data ? data.data : [];
+      setEnquiries(enquiriesData);
     } catch (error) {
       console.error('Error fetching enquiries:', error);
+      // FIX: Set empty array on error to prevent crashes
+      setEnquiries([]);
     } finally {
       setLoading(false);
     }
@@ -28,6 +34,7 @@ const Enquiries = () => {
       fetchEnquiries(); // Refresh list
     } catch (error) {
       console.error('Error updating enquiry status:', error);
+      alert('Error updating enquiry status');
     }
   };
 
@@ -70,7 +77,8 @@ const Enquiries = () => {
 
       {/* Enquiries List */}
       <div className="enquiries-list">
-        {enquiries.length === 0 ? (
+        {/* FIX: Enhanced empty state check */}
+        {!enquiries || enquiries.length === 0 ? (
           <div className="empty-state">
             <p>No enquiries received yet</p>
           </div>
@@ -88,26 +96,29 @@ const Enquiries = () => {
                 </tr>
               </thead>
               <tbody>
-                {enquiries.map(enquiry => (
-                  <tr key={enquiry._id}>
+                {/* FIX: Added array safety check before mapping */}
+                {Array.isArray(enquiries) && enquiries.map(enquiry => (
+                  <tr key={enquiry._id || enquiry.id}>
                     <td>
                       <div className="user-info">
-                        <strong>{enquiry.name}</strong>
+                        <strong>{enquiry.name || 'Unknown'}</strong>
                       </div>
                     </td>
                     <td>
                       <div className="contact-info">
-                        <div>{enquiry.email}</div>
-                        <div>{enquiry.phone}</div>
+                        <div>{enquiry.email || 'No email'}</div>
+                        <div>{enquiry.phone || 'No phone'}</div>
                       </div>
                     </td>
                     <td>
                       <div className="message-preview">
-                        {enquiry.message.substring(0, 50)}...
+                        {/* FIX: Added safety check for message */}
+                        {enquiry.message ? `${enquiry.message.substring(0, 50)}...` : 'No message'}
                       </div>
                     </td>
                     <td>
-                      {new Date(enquiry.createdAt).toLocaleDateString()}
+                      {/* FIX: Added safety check for date */}
+                      {enquiry.createdAt ? new Date(enquiry.createdAt).toLocaleDateString() : 'Unknown date'}
                     </td>
                     <td>
                       {getStatusBadge(enquiry.status)}
@@ -158,13 +169,14 @@ const Enquiries = () => {
             <div className="enquiry-details">
               <div className="detail-section">
                 <h4>Enquiry Details</h4>
-                <p><strong>From:</strong> {selectedEnquiry.name}</p>
-                <p><strong>Email:</strong> {selectedEnquiry.email}</p>
-                <p><strong>Phone:</strong> {selectedEnquiry.phone}</p>
-                <p><strong>Message:</strong> {selectedEnquiry.message}</p>
-                <p><strong>Received:</strong> {new Date(selectedEnquiry.createdAt).toLocaleString()}</p>
+                <p><strong>From:</strong> {selectedEnquiry.name || 'Unknown'}</p>
+                <p><strong>Email:</strong> {selectedEnquiry.email || 'No email'}</p>
+                <p><strong>Phone:</strong> {selectedEnquiry.phone || 'No phone'}</p>
+                <p><strong>Message:</strong> {selectedEnquiry.message || 'No message'}</p>
+                <p><strong>Received:</strong> {selectedEnquiry.createdAt ? new Date(selectedEnquiry.createdAt).toLocaleString() : 'Unknown date'}</p>
               </div>
 
+              {/* FIX: Added safety check for response */}
               {selectedEnquiry.response && (
                 <div className="detail-section">
                   <h4>Previous Response</h4>

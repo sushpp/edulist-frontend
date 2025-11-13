@@ -12,9 +12,15 @@ const ManageUsers = () => {
   const fetchUsers = async () => {
     try {
       const data = await adminService.getAllUsers();
-      setUsers(data);
+      // FIX: Ensure users is always an array with multiple fallbacks
+      const usersData = Array.isArray(data) ? data : 
+                       data?.users ? data.users : 
+                       data?.data ? data.data : [];
+      setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
+      // FIX: Set empty array on error to prevent crashes
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -23,11 +29,16 @@ const ManageUsers = () => {
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       await adminService.toggleUserStatus(userId, !currentStatus);
-      setUsers(users.map(user => 
-        user._id === userId 
-          ? { ...user, isActive: !currentStatus }
-          : user
-      ));
+      // FIX: Added array safety check before mapping
+      setUsers(prevUsers => 
+        Array.isArray(prevUsers) 
+          ? prevUsers.map(user => 
+              user._id === userId 
+                ? { ...user, isActive: !currentStatus }
+                : user
+            )
+          : []
+      );
       alert(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error('Error updating user status:', error);
@@ -43,7 +54,7 @@ const ManageUsers = () => {
     <div className="manage-users">
       <div className="page-header">
         <h2>Manage Users</h2>
-        <p>Total Users: {users.length}</p>
+        <p>Total Users: {Array.isArray(users) ? users.length : 0}</p>
       </div>
 
       <div className="users-table">
@@ -60,21 +71,23 @@ const ManageUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
-              <tr key={user._id}>
+            {/* FIX: Added array safety check before mapping */}
+            {Array.isArray(users) && users.map(user => (
+              <tr key={user._id || user.id}>
                 <td>
                   <div className="user-info">
                     <div className="user-avatar">
-                      {user.name.charAt(0).toUpperCase()}
+                      {/* FIX: Added safety check for user name */}
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
                     </div>
-                    {user.name}
+                    {user.name || 'Unknown User'}
                   </div>
                 </td>
-                <td>{user.email}</td>
-                <td>{user.phone}</td>
+                <td>{user.email || 'No email'}</td>
+                <td>{user.phone || 'No phone'}</td>
                 <td>
-                  <span className={`role-badge ${user.role}`}>
-                    {user.role}
+                  <span className={`role-badge ${user.role || 'user'}`}>
+                    {user.role || 'user'}
                   </span>
                 </td>
                 <td>
@@ -82,7 +95,10 @@ const ManageUsers = () => {
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td>
+                  {/* FIX: Added safety check for date */}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}
+                </td>
                 <td>
                   <button
                     onClick={() => toggleUserStatus(user._id, user.isActive)}
@@ -95,6 +111,13 @@ const ManageUsers = () => {
             ))}
           </tbody>
         </table>
+
+        {/* FIX: Added empty state */}
+        {(!users || !Array.isArray(users) || users.length === 0) && (
+          <div className="empty-state">
+            <p>No users found</p>
+          </div>
+        )}
       </div>
     </div>
   );
