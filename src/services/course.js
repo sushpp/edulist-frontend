@@ -135,10 +135,12 @@ const courseService = {
     }
   },
 
-  // FIX: Added method to get courses by institute ID (for public viewing)
+  // FIX: CORRECTED method to get courses by institute ID (for public viewing)
   getInstituteCourses: async (instituteId) => {
     try {
-      const response = await api.get(`/courses/institute/${instituteId}`);
+      // FIX: Use the correct endpoint that exists on your backend
+      // The endpoint '/courses/institute' doesn't exist - use '/courses' with filters or check your backend routes
+      const response = await api.get(`/courses?institute=${instituteId}`);
       const data = response.data;
       
       // FIX: Enhanced response normalization with multiple fallbacks
@@ -170,28 +172,88 @@ const courseService = {
     }
   },
 
-  // FIX: Added test method to check API response format
-  testApiResponse: async () => {
+  // FIX: Alternative method if the above doesn't work - get all courses and filter by institute
+  getCoursesByInstituteId: async (instituteId) => {
     try {
-      const response = await api.get('/courses/my');
-      console.log('🧪 TEST - Raw Course API Response:', response);
-      console.log('🧪 TEST - Response Data:', response.data);
-      console.log('🧪 TEST - Data Type:', typeof response.data);
-      console.log('🧪 TEST - Is Array?:', Array.isArray(response.data));
+      // Get all courses and filter by institute ID
+      const response = await api.get('/courses');
+      const data = response.data;
       
-      if (response.data && typeof response.data === 'object') {
-        console.log('🧪 TEST - Object Keys:', Object.keys(response.data));
-        Object.keys(response.data).forEach(key => {
-          console.log(`🧪 TEST - Key "${key}":`, typeof response.data[key], Array.isArray(response.data[key]));
-        });
+      console.log('🔍 All Courses API Response:', data);
+      
+      // Extract courses array from response
+      let coursesArray = [];
+      if (Array.isArray(data)) {
+        coursesArray = data;
+      } else if (data && Array.isArray(data.courses)) {
+        coursesArray = data.courses;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        coursesArray = data.data;
       }
       
-      return response.data;
+      // Filter courses by institute ID
+      const instituteCourses = coursesArray.filter(course => 
+        course.institute && course.institute._id === instituteId
+      );
+      
+      console.log(`🔍 Filtered courses for institute ${instituteId}:`, instituteCourses);
+      return instituteCourses;
+      
+    } catch (error) {
+      console.error("❌ Error in courseService.getCoursesByInstituteId:", error);
+      return [];
+    }
+  },
+
+  // FIX: Added method to get course by ID
+  getCourseById: async (courseId) => {
+    try {
+      const response = await api.get(`/courses/${courseId}`);
+      const data = response.data;
+      console.log('🔍 Course by ID API Response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error fetching course by ID:', error);
+      return null;
+    }
+  },
+
+  // FIX: Added test method to check available endpoints
+  testEndpoints: async () => {
+    try {
+      console.log('🧪 TESTING COURSE ENDPOINTS...');
+      
+      // Test 1: Check if /courses/my works
+      console.log('🧪 Testing /courses/my...');
+      try {
+        const myCourses = await api.get('/courses/my');
+        console.log('✅ /courses/my - SUCCESS:', myCourses.data);
+      } catch (error) {
+        console.log('❌ /courses/my - FAILED:', error.response?.status, error.message);
+      }
+      
+      // Test 2: Check if /courses works
+      console.log('🧪 Testing /courses...');
+      try {
+        const allCourses = await api.get('/courses');
+        console.log('✅ /courses - SUCCESS:', allCourses.data);
+      } catch (error) {
+        console.log('❌ /courses - FAILED:', error.response?.status, error.message);
+      }
+      
+      // Test 3: Check if /courses/institute/{id} works
+      console.log('🧪 Testing /courses/institute/{id}...');
+      try {
+        const instituteCourses = await api.get('/courses/institute/test-id');
+        console.log('✅ /courses/institute/{id} - SUCCESS:', instituteCourses.data);
+      } catch (error) {
+        console.log('❌ /courses/institute/{id} - FAILED:', error.response?.status, error.message);
+      }
+      
+      return { success: true };
     } catch (error) {
       console.error('🧪 TEST - Error:', error);
-      // FIX: Return empty object instead of throwing error
-      console.warn('⚠️ TEST - API Error - Returning empty object');
-      return {};
+      return { success: false, error: error.message };
     }
   }
 };
