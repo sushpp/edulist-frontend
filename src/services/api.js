@@ -32,6 +32,7 @@ api.interceptors.request.use(
 // Response Interceptor: Handle Errors & Fix URLs
 api.interceptors.response.use(
   (response) => {
+    // Fix for Mixed Content Warnings
     const responseStr = JSON.stringify(response.data);
     if (responseStr.includes('http://edulist-backend-clv5.onrender.com')) {
       const fixedStr = responseStr.replace(/http:\/\/edulist-backend-clv5\.onrender\.com/g, 'https://edulist-backend-clv5.onrender.com');
