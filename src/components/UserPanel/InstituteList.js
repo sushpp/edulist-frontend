@@ -23,14 +23,14 @@ const InstituteList = () => {
     try {
       const response = await instituteService.getAllInstitutes(filters);
       
-      // FIX: Safely handle the response - ensure we always get an array
-      const institutesData = response?.institutes || response?.data || response || [];
+      // FIX: The service returns { institutes: array } - extract properly
+      const institutesArray = response.institutes || [];
       
       // Additional safety check - ensure it's actually an array
-      if (Array.isArray(institutesData)) {
-        setInstitutes(institutesData);
+      if (Array.isArray(institutesArray)) {
+        setInstitutes(institutesArray);
       } else {
-        console.warn('Expected array but got:', typeof institutesData, institutesData);
+        console.warn('Expected array but got:', typeof institutesArray, institutesArray);
         setInstitutes([]);
         setError('Invalid data format received from server');
       }
@@ -51,13 +51,16 @@ const InstituteList = () => {
   
   const getAverageRating = (institute) => {
     if (!institute.reviews || !Array.isArray(institute.reviews) || institute.reviews.length === 0) return 0;
-    const sum = institute.reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
-    return (sum / institute.reviews.length).toFixed(1);
+    const validReviews = institute.reviews.filter(review => review && typeof review.rating === 'number');
+    if (validReviews.length === 0) return 0;
+    
+    const sum = validReviews.reduce((acc, review) => acc + (review.rating || 0), 0);
+    return (sum / validReviews.length).toFixed(1);
   };
 
   const getPrimaryImage = (institute) => {
     if (!institute.images || !Array.isArray(institute.images) || institute.images.length === 0) return null;
-    const primaryImage = institute.images.find(img => img.isPrimary);
+    const primaryImage = institute.images.find(img => img && img.isPrimary);
     return primaryImage || institute.images[0];
   };
 
@@ -70,6 +73,7 @@ const InstituteList = () => {
   useEffect(() => {
     console.log('Institutes data:', institutes);
     console.log('Is array?', Array.isArray(institutes));
+    console.log('Number of institutes:', institutes.length);
   }, [institutes]);
 
   return (
@@ -169,12 +173,30 @@ const InstituteList = () => {
             const logoUrl = getImageUrl(inst.logo);
             
             return (
-              <div key={inst._id} className="institute-card">
+              <div key={inst._id || inst.id} className="institute-card">
                 <div className="card-image">
-                  {imageUrl && <img src={imageUrl} alt={inst.name} className="institute-main-image" />}
+                  {imageUrl && (
+                    <img 
+                      src={imageUrl} 
+                      alt={inst.name || 'Institute'} 
+                      className="institute-main-image" 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  )}
                   <div className="image-placeholder">
                     {logoUrl ? (
-                      <img src={logoUrl} alt={`${inst.name} Logo`} className="institute-logo" />
+                      <img 
+                        src={logoUrl} 
+                        alt={`${inst.name} Logo`} 
+                        className="institute-logo" 
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.textContent = inst.name?.charAt(0).toUpperCase() || 'I';
+                        }}
+                      />
                     ) : (
                       inst.name?.charAt(0).toUpperCase() || 'I'
                     )}
@@ -186,12 +208,14 @@ const InstituteList = () => {
                 </div>
                 <div className="card-content">
                   <h3 className="institute-name">{inst.name || 'Unnamed Institute'}</h3>
-                  <p className="institute-category">{inst.category} • {inst.affiliation}</p>
+                  <p className="institute-category">
+                    {inst.category || 'Unknown Category'} • {inst.affiliation || 'No Affiliation'}
+                  </p>
                   <p className="institute-location">
-                    📍 {inst.address?.city}, {inst.address?.state}
+                    📍 {inst.address?.city || 'Unknown City'}, {inst.address?.state || 'Unknown State'}
                   </p>
                   <p className="institute-description">
-                    {inst.description?.substring(0, 100)}...
+                    {inst.description ? `${inst.description.substring(0, 100)}...` : 'No description available.'}
                   </p>
                 </div>
                 <div className="card-actions">

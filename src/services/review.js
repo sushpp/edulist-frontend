@@ -10,7 +10,9 @@ export const reviewService = {
       return data;
     } catch (error) {
       console.error('❌ Error creating review:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error creating review - Returning null');
+      return null;
     }
   },
 
@@ -124,7 +126,9 @@ export const reviewService = {
       return data;
     } catch (error) {
       console.error('❌ Error updating review:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error updating review - Returning null');
+      return null;
     }
   },
 
@@ -137,7 +141,9 @@ export const reviewService = {
       return data;
     } catch (error) {
       console.error('❌ Error deleting review:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error deleting review - Returning null');
+      return null;
     }
   },
 
@@ -150,7 +156,9 @@ export const reviewService = {
       return data;
     } catch (error) {
       console.error('❌ Error fetching review by ID:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error fetching review by ID - Returning null');
+      return null;
     }
   },
 
@@ -163,7 +171,9 @@ export const reviewService = {
       return data;
     } catch (error) {
       console.error('❌ Error updating review status:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error updating review status - Returning null');
+      return null;
     }
   },
 
@@ -187,7 +197,9 @@ export const reviewService = {
       return response.data;
     } catch (error) {
       console.error('🧪 TEST - Error:', error);
-      throw error;
+      // FIX: Return empty object instead of throwing error
+      console.warn('⚠️ TEST - API Error - Returning empty object');
+      return {};
     }
   }
 };

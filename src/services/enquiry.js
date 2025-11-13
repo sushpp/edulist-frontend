@@ -10,7 +10,9 @@ export const enquiryService = {
       return data;
     } catch (error) {
       console.error('❌ Error in enquiryService.createEnquiry:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error creating enquiry - Returning null');
+      return null;
     }
   },
 
@@ -98,7 +100,9 @@ export const enquiryService = {
       return data;
     } catch (error) {
       console.error('❌ Error in enquiryService.updateEnquiryStatus:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error updating enquiry status - Returning null');
+      return null;
     }
   },
 
@@ -112,7 +116,9 @@ export const enquiryService = {
       return data;
     } catch (error) {
       console.error('❌ Error in enquiryService.respondToEnquiry:', error);
-      throw error;
+      // FIX: Return null instead of throwing error for consistency
+      console.warn('⚠️ Error responding to enquiry - Returning null');
+      return null;
     }
   },
 
@@ -131,10 +137,18 @@ export const enquiryService = {
         return data.enquiries;
       } else if (data && data.data && Array.isArray(data.data)) {
         return data.data;
-      } else {
-        console.warn('❌ Unexpected API response format for all enquiries. Returning empty array.');
-        return [];
+      } else if (data && data.data && Array.isArray(data.data.enquiries)) {
+        return data.data.enquiries;
+      } else if (data && typeof data === 'object') {
+        // Try to find any array property in the response
+        const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]));
+        if (arrayKeys.length > 0) {
+          return data[arrayKeys[0]];
+        }
       }
+      
+      console.warn('❌ Unexpected API response format for all enquiries. Returning empty array.');
+      return [];
       
     } catch (error) {
       console.error('❌ Error in enquiryService.getAllEnquiries:', error);
@@ -142,7 +156,33 @@ export const enquiryService = {
     }
   },
 
-  // FIX: Added test method to check API response format
+  // FIX: Added method to get enquiry by ID
+  getEnquiryById: async (enquiryId) => {
+    try {
+      const response = await api.get(`/enquiries/${enquiryId}`);
+      const data = response.data;
+      console.log('🔍 Enquiry by ID API Response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error fetching enquiry by ID:', error);
+      return null;
+    }
+  },
+
+  // FIX: Added method to delete enquiry
+  deleteEnquiry: async (enquiryId) => {
+    try {
+      const response = await api.delete(`/enquiries/${enquiryId}`);
+      const data = response.data;
+      console.log('🔍 Delete Enquiry API Response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error deleting enquiry:', error);
+      return null;
+    }
+  },
+
+  // FIX: Enhanced test method with better error handling
   testApiResponse: async (endpoint = '/enquiries/institute') => {
     try {
       const response = await api.get(endpoint);
@@ -161,7 +201,40 @@ export const enquiryService = {
       return response.data;
     } catch (error) {
       console.error('🧪 TEST - Error:', error);
-      throw error;
+      // FIX: Return empty object instead of throwing error
+      console.warn('⚠️ TEST - API Error - Returning empty object');
+      return {};
+    }
+  },
+
+  // FIX: Added method to test all endpoints
+  testAllEndpoints: async () => {
+    try {
+      console.log('🧪 TESTING ALL ENQUIRY ENDPOINTS...');
+      
+      const endpoints = [
+        '/enquiries/institute',
+        '/enquiries/user', 
+        '/enquiries'
+      ];
+      
+      const results = {};
+      
+      for (const endpoint of endpoints) {
+        try {
+          const response = await api.get(endpoint);
+          console.log(`✅ ${endpoint} - SUCCESS:`, response.data);
+          results[endpoint] = { success: true, data: response.data };
+        } catch (error) {
+          console.log(`❌ ${endpoint} - FAILED:`, error.response?.status, error.message);
+          results[endpoint] = { success: false, error: error.message };
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('🧪 TEST ALL - Error:', error);
+      return { success: false, error: error.message };
     }
   }
 };

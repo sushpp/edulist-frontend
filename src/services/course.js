@@ -135,72 +135,61 @@ const courseService = {
     }
   },
 
-  // FIX: CORRECTED method to get courses by institute ID (for public viewing)
+  // FIX: SIMPLIFIED method to get courses by institute ID
   getInstituteCourses: async (instituteId) => {
     try {
-      // FIX: Use the correct endpoint that exists on your backend
-      // The endpoint '/courses/institute' doesn't exist - use '/courses' with filters or check your backend routes
-      const response = await api.get(`/courses?institute=${instituteId}`);
-      const data = response.data;
+      // FIX: Try multiple endpoint patterns to find what works
+      let coursesData = [];
       
-      // FIX: Enhanced response normalization with multiple fallbacks
-      console.log('🔍 Institute Courses API Response:', data);
+      // Try endpoint 1: /courses with institute filter
+      try {
+        const response1 = await api.get(`/courses?institute=${instituteId}`);
+        const data1 = response1.data;
+        console.log('🔍 Institute Courses API Response (Endpoint 1):', data1);
+        
+        if (Array.isArray(data1)) {
+          coursesData = data1;
+        } else if (data1 && Array.isArray(data1.courses)) {
+          coursesData = data1.courses;
+        } else if (data1 && data1.data && Array.isArray(data1.data)) {
+          coursesData = data1.data;
+        }
+      } catch (error) {
+        console.log('❌ Endpoint 1 failed, trying alternative...');
+      }
       
-      if (Array.isArray(data)) {
-        return data;
-      } else if (data && Array.isArray(data.courses)) {
-        return data.courses;
-      } else if (data && data.data && Array.isArray(data.data)) {
-        return data.data;
-      } else if (data && data.data && Array.isArray(data.data.courses)) {
-        return data.data.courses;
-      } else if (data && typeof data === 'object') {
-        // Try to find any array property in the response
-        const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]));
-        if (arrayKeys.length > 0) {
-          return data[arrayKeys[0]];
+      // If first endpoint failed or returned no data, try endpoint 2: get all and filter
+      if (!coursesData || coursesData.length === 0) {
+        try {
+          const response2 = await api.get('/courses');
+          const data2 = response2.data;
+          console.log('🔍 All Courses API Response (Endpoint 2):', data2);
+          
+          // Extract courses array from response
+          let allCourses = [];
+          if (Array.isArray(data2)) {
+            allCourses = data2;
+          } else if (data2 && Array.isArray(data2.courses)) {
+            allCourses = data2.courses;
+          } else if (data2 && data2.data && Array.isArray(data2.data)) {
+            allCourses = data2.data;
+          }
+          
+          // Filter courses by institute ID
+          coursesData = allCourses.filter(course => 
+            course && course.institute && course.institute._id === instituteId
+          );
+        } catch (error) {
+          console.log('❌ Endpoint 2 also failed');
         }
       }
       
-      console.warn('❌ Unexpected API response format for institute courses. Returning empty array.');
-      return [];
+      console.log(`🔍 Final courses for institute ${instituteId}:`, coursesData);
+      return Array.isArray(coursesData) ? coursesData : [];
       
     } catch (error) {
       console.error("❌ Error in courseService.getInstituteCourses:", error);
       // FIX: Return empty array on error to prevent crashes
-      return [];
-    }
-  },
-
-  // FIX: Alternative method if the above doesn't work - get all courses and filter by institute
-  getCoursesByInstituteId: async (instituteId) => {
-    try {
-      // Get all courses and filter by institute ID
-      const response = await api.get('/courses');
-      const data = response.data;
-      
-      console.log('🔍 All Courses API Response:', data);
-      
-      // Extract courses array from response
-      let coursesArray = [];
-      if (Array.isArray(data)) {
-        coursesArray = data;
-      } else if (data && Array.isArray(data.courses)) {
-        coursesArray = data.courses;
-      } else if (data && data.data && Array.isArray(data.data)) {
-        coursesArray = data.data;
-      }
-      
-      // Filter courses by institute ID
-      const instituteCourses = coursesArray.filter(course => 
-        course.institute && course.institute._id === instituteId
-      );
-      
-      console.log(`🔍 Filtered courses for institute ${instituteId}:`, instituteCourses);
-      return instituteCourses;
-      
-    } catch (error) {
-      console.error("❌ Error in courseService.getCoursesByInstituteId:", error);
       return [];
     }
   },
@@ -218,43 +207,72 @@ const courseService = {
     }
   },
 
-  // FIX: Added test method to check available endpoints
-  testEndpoints: async () => {
+  // FIX: Added method to get courses by category
+  getCoursesByCategory: async (category) => {
     try {
-      console.log('🧪 TESTING COURSE ENDPOINTS...');
+      const response = await api.get(`/courses?category=${category}`);
+      const data = response.data;
       
-      // Test 1: Check if /courses/my works
-      console.log('🧪 Testing /courses/my...');
-      try {
-        const myCourses = await api.get('/courses/my');
-        console.log('✅ /courses/my - SUCCESS:', myCourses.data);
-      } catch (error) {
-        console.log('❌ /courses/my - FAILED:', error.response?.status, error.message);
+      if (Array.isArray(data)) {
+        return data;
+      } else if (data && Array.isArray(data.courses)) {
+        return data.courses;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ Error fetching courses by category:', error);
+      return [];
+    }
+  },
+
+  // FIX: Enhanced test method to check ALL possible endpoints
+  testEndpoints: async (instituteId = 'test-id') => {
+    try {
+      console.log('🧪 TESTING ALL COURSE ENDPOINTS...');
+      
+      const endpoints = [
+        { name: '/courses/my', url: '/courses/my' },
+        { name: '/courses', url: '/courses' },
+        { name: '/courses?institute={id}', url: `/courses?institute=${instituteId}` },
+        { name: '/courses/institute/{id}', url: `/courses/institute/${instituteId}` },
+        { name: '/courses/public', url: '/courses/public' },
+      ];
+      
+      const results = [];
+      
+      for (const endpoint of endpoints) {
+        console.log(`🧪 Testing ${endpoint.name}...`);
+        try {
+          const response = await api.get(endpoint.url);
+          console.log(`✅ ${endpoint.name} - SUCCESS:`, response.data);
+          results.push({
+            endpoint: endpoint.name,
+            status: 'SUCCESS',
+            data: response.data
+          });
+        } catch (error) {
+          console.log(`❌ ${endpoint.name} - FAILED:`, error.response?.status, error.message);
+          results.push({
+            endpoint: endpoint.name,
+            status: 'FAILED',
+            error: error.message,
+            statusCode: error.response?.status
+          });
+        }
       }
       
-      // Test 2: Check if /courses works
-      console.log('🧪 Testing /courses...');
-      try {
-        const allCourses = await api.get('/courses');
-        console.log('✅ /courses - SUCCESS:', allCourses.data);
-      } catch (error) {
-        console.log('❌ /courses - FAILED:', error.response?.status, error.message);
-      }
-      
-      // Test 3: Check if /courses/institute/{id} works
-      console.log('🧪 Testing /courses/institute/{id}...');
-      try {
-        const instituteCourses = await api.get('/courses/institute/test-id');
-        console.log('✅ /courses/institute/{id} - SUCCESS:', instituteCourses.data);
-      } catch (error) {
-        console.log('❌ /courses/institute/{id} - FAILED:', error.response?.status, error.message);
-      }
-      
-      return { success: true };
+      return { success: true, results };
     } catch (error) {
       console.error('🧪 TEST - Error:', error);
       return { success: false, error: error.message };
     }
+  },
+
+  // FIX: Added method to check what endpoints are available
+  discoverEndpoints: async () => {
+    console.log('🔍 Discovering available course endpoints...');
+    return await courseService.testEndpoints();
   }
 };
 

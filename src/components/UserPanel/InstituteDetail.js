@@ -31,53 +31,51 @@ const InstituteDetail = () => {
     fetchInstituteDetail();
   }, [id]);
 
- // src/pages/InstituteDetail.js
-const fetchInstituteDetail = async () => {
-  try {
-    setError('');
-    const response = await instituteService.getAllInstitutes();
-    
-    // FIX: Safely handle the response
-    const institutesData = response?.institutes || response?.data || response || [];
-    
-    if (Array.isArray(institutesData)) {
-      const foundInstitute = institutesData.find(inst => inst._id === id);
+  const fetchInstituteDetail = async () => {
+    try {
+      setError('');
+      const response = await instituteService.getAllInstitutes();
+      
+      // FIX: Safely handle the response - service returns { institutes: array }
+      const institutesArray = response.institutes || [];
+      
+      if (Array.isArray(institutesArray)) {
+        const foundInstitute = institutesArray.find(inst => inst._id === id);
 
-      if (foundInstitute) {
-        setInstitute(foundInstitute);
+        if (foundInstitute) {
+          setInstitute(foundInstitute);
 
-        // FIX: Use the correct endpoint with institute ID
-        try {
-          // Change from '/courses/institute' to '/courses/institute/{id}'
-          const coursesData = await courseService.getInstituteCourses(foundInstitute._id);
-          setCourses(Array.isArray(coursesData) ? coursesData : []);
-        } catch (courseError) {
-          console.log('No courses found or API error');
-          setCourses([]);
-        }
+          // Fetch courses
+          try {
+            const coursesData = await courseService.getInstituteCourses(foundInstitute._id);
+            setCourses(Array.isArray(coursesData) ? coursesData : []);
+          } catch (courseError) {
+            console.log('No courses found or API error');
+            setCourses([]);
+          }
 
-        // Fetch reviews
-        try {
-          const reviewsData = await reviewService.getInstituteReviews(foundInstitute._id);
-          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-        } catch (reviewError) {
-          console.log('No reviews found');
-          setReviews([]);
+          // Fetch reviews
+          try {
+            const reviewsData = await reviewService.getInstituteReviews(foundInstitute._id);
+            setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+          } catch (reviewError) {
+            console.log('No reviews found');
+            setReviews([]);
+          }
+        } else {
+          setError('Institute not found');
         }
       } else {
-        setError('Institute not found');
+        console.warn('Expected array of institutes but got:', typeof institutesArray);
+        setError('Invalid data format received');
       }
-    } else {
-      console.warn('Expected array of institutes but got:', typeof institutesData);
-      setError('Invalid data format received');
+    } catch (error) {
+      console.error('Error fetching institute details:', error);
+      setError('Failed to load institute details');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching institute details:', error);
-    setError('Failed to load institute details');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleReviewSubmit = async (reviewData) => {
     try {
@@ -103,8 +101,11 @@ const fetchInstituteDetail = async () => {
 
   const getAverageRating = () => {
     if (!reviews || !Array.isArray(reviews) || reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
-    return (sum / reviews.length).toFixed(1);
+    const validReviews = reviews.filter(review => review && typeof review.rating === 'number');
+    if (validReviews.length === 0) return 0;
+    
+    const sum = validReviews.reduce((acc, review) => acc + (review.rating || 0), 0);
+    return (sum / validReviews.length).toFixed(1);
   };
 
   // Get all images including primary
@@ -171,17 +172,17 @@ const fetchInstituteDetail = async () => {
               />
             )}
             <div className="institute-info">
-              <h1>{institute.name}</h1>
+              <h1>{institute.name || 'Unnamed Institute'}</h1>
               <div className="institute-meta">
-                <span className="category">{institute.category}</span>
-                <span className="affiliation">{institute.affiliation}</span>
+                <span className="category">{institute.category || 'Unknown Category'}</span>
+                <span className="affiliation">{institute.affiliation || 'No Affiliation'}</span>
                 <div className="rating-section">
                   <span className="rating">⭐ {getAverageRating()}</span>
                   <span className="review-count">({reviews.length} reviews)</span>
                 </div>
               </div>
               <p className="location">
-                📍 {institute.address?.street}, {institute.address?.city}, {institute.address?.state} - {institute.address?.pincode}
+                📍 {institute.address?.street || 'Address not available'}, {institute.address?.city || 'Unknown City'}, {institute.address?.state || 'Unknown State'} - {institute.address?.pincode || 'N/A'}
               </p>
             </div>
           </div>
@@ -231,22 +232,22 @@ const fetchInstituteDetail = async () => {
           <div className="overview-tab">
             <div className="description-section">
               <h3>About {institute.name}</h3>
-              <p>{institute.description}</p>
+              <p>{institute.description || 'No description available.'}</p>
             </div>
             <div className="quick-info">
               <div className="info-card">
                 <h4>📞 Contact Info</h4>
-                <p><strong>Email:</strong> {institute.contact?.email}</p>
-                <p><strong>Phone:</strong> {institute.contact?.phone}</p>
+                <p><strong>Email:</strong> {institute.contact?.email || 'Not provided'}</p>
+                <p><strong>Phone:</strong> {institute.contact?.phone || 'Not provided'}</p>
                 {institute.contact?.website && (
                   <p><strong>Website:</strong> <a href={institute.contact.website} target="_blank" rel="noopener noreferrer">{institute.contact.website}</a></p>
                 )}
               </div>
               <div className="info-card">
                 <h4>📍 Location</h4>
-                <p>{institute.address?.street}</p>
-                <p>{institute.address?.city}, {institute.address?.state}</p>
-                <p><strong>Pincode:</strong> {institute.address?.pincode}</p>
+                <p>{institute.address?.street || 'Address not specified'}</p>
+                <p>{institute.address?.city || 'Unknown City'}, {institute.address?.state || 'Unknown State'}</p>
+                <p><strong>Pincode:</strong> {institute.address?.pincode || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -256,7 +257,7 @@ const fetchInstituteDetail = async () => {
         {activeTab === 'courses' && (
           <div className="courses-tab">
             <h3>Available Courses</h3>
-            {courses.length === 0 ? (
+            {!courses || courses.length === 0 ? (
               <div className="empty-state">
                 <p>No courses listed yet. Check back later or contact the institute for course information.</p>
               </div>
@@ -264,12 +265,12 @@ const fetchInstituteDetail = async () => {
               <div className="courses-grid">
                 {/* FIX: Added array safety check */}
                 {Array.isArray(courses) && courses.map(course => (
-                  <div key={course._id} className="course-card">
-                    <h4>{course.title}</h4>
-                    <p className="course-description">{course.description}</p>
+                  <div key={course._id || course.id} className="course-card">
+                    <h4>{course.title || 'Untitled Course'}</h4>
+                    <p className="course-description">{course.description || 'No description available.'}</p>
                     <div className="course-details">
-                      <div className="detail-item"><strong>Duration:</strong> {course.duration}</div>
-                      <div className="detail-item"><strong>Fees:</strong> ₹{course.fees?.toLocaleString()}</div>
+                      <div className="detail-item"><strong>Duration:</strong> {course.duration || 'Not specified'}</div>
+                      <div className="detail-item"><strong>Fees:</strong> ₹{course.fees ? course.fees.toLocaleString() : 'Not specified'}</div>
                       {course.eligibility && <div className="detail-item"><strong>Eligibility:</strong> {course.eligibility}</div>}
                       {course.category && <div className="detail-item"><strong>Category:</strong> {course.category}</div>}
                     </div>
@@ -302,7 +303,7 @@ const fetchInstituteDetail = async () => {
                 {/* FIX: Added array safety check */}
                 {Array.isArray(institute.facilities) && institute.facilities.map((f, idx) => (
                   <div key={idx} className="facility-item">
-                    <h4>{f.name}</h4>
+                    <h4>{f.name || 'Unnamed Facility'}</h4>
                     {f.description && <p>{f.description}</p>}
                   </div>
                 ))}
@@ -324,7 +325,11 @@ const fetchInstituteDetail = async () => {
                 {/* FIX: Added array safety check */}
                 {Array.isArray(allImages) && allImages.map((image, idx) => (
                   <div key={idx} className="gallery-item">
-                    <img src={getImageUrl(image)} alt={`${institute.name} Image ${idx + 1}`} onClick={() => setSelectedImageIndex(idx)} />
+                    <img 
+                      src={getImageUrl(image)} 
+                      alt={`${institute.name} Image ${idx + 1}`} 
+                      onClick={() => setSelectedImageIndex(idx)} 
+                    />
                     {image.type === 'logo' && <div className="image-badge">Logo</div>}
                     {image.isPrimary && image.type !== 'logo' && <div className="image-badge primary">Primary</div>}
                   </div>
@@ -339,7 +344,7 @@ const fetchInstituteDetail = async () => {
           <div className="reviews-tab">
             <h3>Student & Parent Reviews</h3>
             <div className="reviews-list">
-              {reviews.length === 0 ? (
+              {!reviews || reviews.length === 0 ? (
                 <div className="empty-state">
                   <p>No reviews yet. Be the first to review this institute!</p>
                   {user && <button onClick={() => setShowReviewForm(true)} className="btn btn-primary">Write First Review</button>}
@@ -347,18 +352,24 @@ const fetchInstituteDetail = async () => {
               ) : (
                 // FIX: Added array safety check
                 Array.isArray(reviews) && reviews.map(review => (
-                  <div key={review._id} className="review-card">
+                  <div key={review._id || review.id} className="review-card">
                     <div className="review-header">
                       <div className="reviewer-info">
-                        <div className="reviewer-avatar">{review.user?.name?.charAt(0).toUpperCase() || 'U'}</div>
+                        <div className="reviewer-avatar">
+                          {review.user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
                         <div>
                           <strong>{review.user?.name || 'Anonymous'}</strong>
-                          <div className="review-rating">{'⭐'.repeat(review.rating)}</div>
+                          <div className="review-rating">
+                            {'⭐'.repeat(review.rating || 0)}
+                          </div>
                         </div>
                       </div>
-                      <span className="review-date">{new Date(review.createdAt).toLocaleDateString()}</span>
+                      <span className="review-date">
+                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Unknown date'}
+                      </span>
                     </div>
-                    <p className="review-text">{review.reviewText}</p>
+                    <p className="review-text">{review.reviewText || 'No review text provided.'}</p>
                   </div>
                 ))
               )}
@@ -371,18 +382,30 @@ const fetchInstituteDetail = async () => {
           <div className="contact-tab">
             <h3>Contact Information</h3>
             <div className="contact-details">
-              <div className="contact-info"><h4>📞 Phone</h4><p>{institute.contact?.phone}</p></div>
-              <div className="contact-info"><h4>📧 Email</h4><p>{institute.contact?.email}</p></div>
+              <div className="contact-info"><h4>📞 Phone</h4><p>{institute.contact?.phone || 'Not provided'}</p></div>
+              <div className="contact-info"><h4>📧 Email</h4><p>{institute.contact?.email || 'Not provided'}</p></div>
               {institute.contact?.website && <div className="contact-info"><h4>🌐 Website</h4><p><a href={institute.contact.website} target="_blank" rel="noopener noreferrer">{institute.contact.website}</a></p></div>}
-              <div className="contact-info"><h4>📍 Address</h4><p>{institute.address?.street}</p><p>{institute.address?.city}, {institute.address?.state}</p><p><strong>Pincode:</strong> {institute.address?.pincode}</p></div>
+              <div className="contact-info"><h4>📍 Address</h4><p>{institute.address?.street || 'Address not specified'}</p><p>{institute.address?.city || 'Unknown City'}, {institute.address?.state || 'Unknown State'}</p><p><strong>Pincode:</strong> {institute.address?.pincode || 'N/A'}</p></div>
             </div>
           </div>
         )}
       </div>
 
       {/* Modals */}
-      {showReviewForm && <ReviewForm institute={institute} onSubmit={handleReviewSubmit} onClose={() => setShowReviewForm(false)} />}
-      {showEnquiryForm && <EnquiryForm institute={institute} onSubmit={handleEnquirySubmit} onClose={() => setShowEnquiryForm(false)} />}
+      {showReviewForm && (
+        <ReviewForm 
+          institute={institute} 
+          onSubmit={handleReviewSubmit} 
+          onClose={() => setShowReviewForm(false)} 
+        />
+      )}
+      {showEnquiryForm && (
+        <EnquiryForm 
+          institute={institute} 
+          onSubmit={handleEnquirySubmit} 
+          onClose={() => setShowEnquiryForm(false)} 
+        />
+      )}
     </div>
   );
 };

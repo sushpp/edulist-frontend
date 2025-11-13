@@ -18,39 +18,39 @@ export const instituteService = {
       // FIX: Enhanced response normalization with better debugging
       console.log('🔍 Institute API Response:', data);
       
-      // Handle various response formats and always return { institutes: array }
+      // Handle various response formats and always return THE ARRAY directly
       if (Array.isArray(data)) {
         console.log('📦 API returned direct array');
-        return { institutes: data };
+        return data; // Return array directly
       } else if (data && Array.isArray(data.institutes)) {
         console.log('📦 API returned { institutes: array }');
-        return data;
+        return data.institutes; // Extract and return array
       } else if (data && data.data && Array.isArray(data.data)) {
         console.log('📦 API returned { data: array }');
-        return { institutes: data.data };
+        return data.data; // Extract and return array
       } else if (data && data.data && Array.isArray(data.data.institutes)) {
         console.log('📦 API returned { data: { institutes: array } }');
-        return { institutes: data.data.institutes };
+        return data.data.institutes; // Extract and return array
       } else if (data && typeof data === 'object') {
         // Try to find any array property in the response
         const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]));
         if (arrayKeys.length > 0) {
           console.log(`📦 Found array in property: ${arrayKeys[0]}`);
-          return { institutes: data[arrayKeys[0]] };
+          return data[arrayKeys[0]]; // Return the found array
         }
       }
       
       // If no array found, return empty array
       console.warn('❌ Unexpected API response format. No array found. Returning empty array.');
       console.warn('Response structure:', typeof data, data);
-      return { institutes: [] };
+      return []; // Return empty array directly
       
     } catch (error) {
       console.error('❌ Error fetching institutes:', error);
       
       // FIX: Return empty array instead of throwing error to prevent component crashes
       console.warn('⚠️ API Error - Returning empty institutes array');
-      return { institutes: [] };
+      return []; // Return empty array directly
     }
   },
 
