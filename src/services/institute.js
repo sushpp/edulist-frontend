@@ -1,30 +1,7 @@
+// src/services/institute.js
 import api from './api';
 
-/**
- * @typedef {Object} Institute
- * @property {string} _id - The unique identifier for the institute.
- * @property {string} name - The name of the institute.
- * @property {string} [category] - The category of the institute (e.g., 'school', 'college').
- * @property {string} [affiliation] - The affiliation board (e.g., 'CBSE', 'University').
- * @property {Object} [address] - The address object.
- * @property {string} [address.city] - The city of the institute.
- * @property {string} [address.state] - The state of the institute.
- * @property {Array<Object>} [reviews] - An array of review objects.
- * @property {string} [description] - A short description of the institute.
- */
-
-/**
- * A service layer for handling all institute-related API calls.
- * It normalizes responses and handles errors gracefully.
- */
 export const instituteService = {
-  /**
-   * Fetches all public institutes with optional filters.
-   * Normalizes the API response to ensure a consistent { institutes: Array } structure.
-   * @param {Object} [filters={}] - The query parameters for filtering institutes.
-   * @returns {Promise<{institutes: Institute[]}>} A promise that resolves to an object containing an array of institutes.
-   * @throws {Error} If the request fails or the server returns an error.
-   */
   getAllInstitutes: async (filters = {}) => {
     try {
       const params = new URLSearchParams();
@@ -36,6 +13,10 @@ export const instituteService = {
       
       const response = await api.get(`/institutes/public?${params}`);
       const data = response.data;
+      
+      // === DEBUGGING LOG ===
+      // Check your browser's console to see what the API is returning!
+      console.log('API Response from getAllInstitutes:', data);
       
       // Normalize the response to ensure it always has the expected structure
       if (Array.isArray(data)) {
@@ -66,67 +47,35 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Fetches a single institute by its ID.
-   * @param {string} id - The ID of the institute to fetch.
-   * @returns {Promise<Institute>} A promise that resolves to the institute object.
-   * @throws {Error} If the institute is not found or the request fails.
-   */
+  // ... other methods remain the same
   getInstituteById: async (id) => {
     try {
       const response = await api.get(`/institutes/${id}`);
-      const institute = response.data;
-
-      // Basic validation to ensure we got an institute object
-      if (!institute || !institute._id) {
-        throw new Error('Invalid institute data received from server.');
-      }
-      
-      return institute;
+      return response.data;
     } catch (error) {
-      console.error(`Error fetching institute with id ${id}:`, error);
-      
+      console.error('Error fetching institute:', error);
       if (error.response?.status === 404) {
         throw new Error('Institute not found');
       }
-      
-      // Re-throw the validation error or a generic one
-      if (error.message.includes('Invalid institute data')) {
-        throw error;
-      }
-      
       const errorMessage = error.response?.data?.message || 'Failed to fetch institute details';
       throw new Error(errorMessage);
     }
   },
 
-  /**
-   * Fetches the profile of the currently logged-in institute.
-   * @returns {Promise<Institute>} A promise that resolves to the institute's profile data.
-   * @throws {Error} If the user is not authenticated or the request fails.
-   */
   getInstituteProfile: async () => {
     try {
       const response = await api.get('/institutes/profile');
       return response.data;
     } catch (error) {
       console.error('Error fetching institute profile:', error);
-      
       if (error.response?.status === 401) {
-        throw new Error('Please login to access your institute profile.');
+        throw new Error('Please login to access institute profile');
       }
-      
       const errorMessage = error.response?.data?.message || 'Failed to fetch institute profile';
       throw new Error(errorMessage);
     }
   },
 
-  /**
-   * Updates the profile of the currently logged-in institute.
-   * @param {Partial<Institute>} data - The data to update.
-   * @returns {Promise<Institute>} A promise that resolves to the updated institute profile.
-   * @throws {Error} If the update fails.
-   */
   updateInstitute: async (data) => {
     try {
       const response = await api.put('/institutes/profile', data);
@@ -138,12 +87,6 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Adds a new facility to the institute's profile.
-   * @param {Object} facility - The facility object to add.
-   * @returns {Promise<Object>} A promise that resolves to the updated facilities list.
-   * @throws {Error} If adding the facility fails.
-   */
   addFacility: async (facility) => {
     try {
       const response = await api.post('/institutes/facilities', facility);
@@ -155,12 +98,6 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Removes a facility from the institute's profile.
-   * @param {string} facilityId - The ID of the facility to remove.
-   * @returns {Promise<Object>} A promise that resolves to the updated facilities list.
-   * @throws {Error} If removing the facility fails.
-   */
   removeFacility: async (facilityId) => {
     try {
       const response = await api.delete(`/institutes/facilities/${facilityId}`);

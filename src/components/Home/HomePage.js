@@ -8,7 +8,8 @@ const HomePage = () => {
   const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
   const [stats, setStats] = useState({ institutes: 0, reviews: 0, students: 0 });
   const [searchTerm, setSearchTerm] = useState('');
-  // --- IMPROVEMENT 1: Add loading and error states ---
+  
+  // --- State for handling loading and errors ---
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
@@ -24,6 +25,7 @@ const HomePage = () => {
     setIsLoading(true);
     setFetchError(null); // Reset error on new fetch
     try {
+      // The service guarantees a { institutes: [] } structure
       const response = await instituteService.getAllInstitutes();
       const featured = response.institutes.slice(0, 6);
       setFeaturedInstitutes(featured);
@@ -37,6 +39,7 @@ const HomePage = () => {
   };
 
   const fetchStats = async () => {
+    // This is static data, so no changes needed here
     setStats({ institutes: 125, reviews: 2400, students: 15000 });
   };
 
@@ -48,6 +51,7 @@ const HomePage = () => {
   };
 
   const getAverageRating = (institute) => {
+    // Added safety check for reviews array
     if (!institute.reviews || !Array.isArray(institute.reviews) || institute.reviews.length === 0) return 0;
     const sum = institute.reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
     return (sum / institute.reviews.length).toFixed(1);
@@ -57,7 +61,6 @@ const HomePage = () => {
     <div className="homepage">
       {/* Hero Section */}
       <section className="hero-section">
-        {/* ... (no changes in this section) */}
         <div className="hero-content">
           <h1>Find Your Perfect Educational Institute</h1>
           <p>Discover the best schools, colleges, and coaching centers with authentic reviews and ratings</p>
@@ -87,7 +90,6 @@ const HomePage = () => {
 
       {/* Features Section */}
       <section className="features-section">
-        {/* ... (no changes in this section) */}
         <div className="container">
           <h2>Why Choose EduList?</h2>
           <div className="features-grid">
@@ -107,11 +109,10 @@ const HomePage = () => {
             <Link to="/institutes" className="view-all">View All →</Link>
           </div>
           
-          {/* --- IMPROVEMENT 2: Add loading and error handling to the UI --- */}
           <div className="institutes-grid">
             {isLoading ? (
               <div className="loading-state">
-                <div className="spinner"></div> {/* You would style this in your CSS */}
+                <div className="spinner"></div>
                 <p>Loading featured institutes...</p>
               </div>
             ) : fetchError ? (
@@ -121,8 +122,6 @@ const HomePage = () => {
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              // The safety check here is still fine, but now redundant.
-              // You can simplify it to just: featuredInstitutes.map(...)
               featuredInstitutes.map(institute => (
                 <div key={institute._id} className="institute-card">
                   <div className="card-image">
@@ -151,7 +150,6 @@ const HomePage = () => {
 
       {/* CTA Section */}
       <section className="cta-section">
-        {/* ... (no changes in this section) */}
         <div className="container">
           <div className="cta-content">
             <h2>Are You an Educational Institute?</h2>
@@ -163,7 +161,6 @@ const HomePage = () => {
 
       {/* Categories Section */}
       <section className="categories-section">
-        {/* ... (no changes in this section) */}
         <div className="container">
           <h2>Browse by Category</h2>
           <div className="categories-grid">
