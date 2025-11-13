@@ -1,4 +1,5 @@
 // src/services/institute.js
+// Version 3.0 - Final Error Handling
 import api from './api';
 
 export const instituteService = {
@@ -15,7 +16,7 @@ export const instituteService = {
       const response = await api.get(requestUrl);
       const data = response.data;
       
-      // Normalize response to ensure it always has the expected structure
+      // Normalize response
       if (Array.isArray(data)) return { institutes: data };
       if (data && Array.isArray(data.institutes)) return data;
       if (data && data.data && Array.isArray(data.data)) return { institutes: data.data };
@@ -25,14 +26,13 @@ export const instituteService = {
     } catch (error) {
       console.error('Error fetching institutes:', error);
       
-      // === CRITICAL FIX: Check for the specific Axios timeout error code ===
+      // CRITICAL FIX: Check for the specific Axios timeout error code
       if (error.code === 'ECONNABORTED') {
         throw new Error('The server is taking too long to respond. Please try again.');
       }
       
-      // Check for other network errors
       if (!error.response) {
-        throw new Error('Network error. Please check your connection and try again.');
+        throw new Error('Network error. Please check your connection.');
       }
       
       const errorMessage = error.response?.data?.message || 'Failed to fetch institutes';
