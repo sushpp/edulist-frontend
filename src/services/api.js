@@ -3,23 +3,22 @@ import axios from 'axios';
 
 // =======================
 // ✅ Base API URL Configuration
-// Automatically switches between localhost (for development) and Render (for production)
 // =======================
 const isLocalhost = window.location.hostname === 'localhost';
 
 const API_URL = process.env.REACT_APP_API_URL
-  ? process.env.REACT_APP_API_URL.replace(/\/$/, '') // Use .env file if present
+  ? process.env.REACT_APP_API_URL.replace(/\/$/, '')
   : isLocalhost
-  ? 'http://localhost:5000/api' // Local backend URL
-  : 'https://edulist-backend-clv5.onrender.com/api'; // Production backend URL
+  ? 'http://localhost:5000/api'
+  : 'https://edulist-backend-clv5.onrender.com/api';
 
 // =======================
 // ✅ Create and Configure Axios Instance
-// Sets a 30-second timeout to handle slow connections.
+// Timeout set to 60 seconds to prevent any timeout errors.
 // =======================
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000, // 30 seconds
+  timeout: 60000, // 60 seconds
 });
 
 // =======================
@@ -41,18 +40,16 @@ api.interceptors.request.use(
 // =======================
 api.interceptors.response.use(
   (response) => {
-    // Efficient fix for Mixed Content Warnings
+    // Fix for Mixed Content Warnings
     const responseStr = JSON.stringify(response.data);
     if (responseStr.includes('http://edulist-backend-clv5.onrender.com')) {
       const fixedStr = responseStr.replace(/http:\/\/edulist-backend-clv5\.onrender\.com/g, 'https://edulist-backend-clv5.onrender.com');
       response.data = JSON.parse(fixedStr);
     }
-    
     return response;
   },
   (error) => {
     if (error.response) {
-      // If the server responds with a 401 (Unauthorized), log the user out.
       if (error.response.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -60,10 +57,8 @@ api.interceptors.response.use(
       }
       console.error('API Error:', error.response.data);
     } else if (error.request) {
-      // The request was made but no response was received (network error)
       console.error('API Error: No response from server', error.request);
     } else {
-      // Something else happened in setting up the request
       console.error('API Error:', error.message);
     }
     return Promise.reject(error);

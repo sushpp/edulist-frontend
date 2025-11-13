@@ -1,18 +1,7 @@
 // src/services/institute.js
 import api from './api';
 
-/**
- * A service layer for handling all institute-related API calls.
- * It normalizes responses and handles errors gracefully.
- */
 export const instituteService = {
-  /**
-   * Fetches all public institutes with optional filters.
-   * Normalizes API response to ensure a consistent { institutes: Array } structure.
-   * @param {Object} [filters={}] - The query parameters for filtering institutes.
-   * @returns {Promise<{institutes: Array}>} A promise that resolves to an object containing an array of institutes.
-   * @throws {Error} If the request fails or the server returns an error.
-   */
   getAllInstitutes: async (filters = {}) => {
     try {
       const params = new URLSearchParams();
@@ -23,11 +12,10 @@ export const instituteService = {
       });
       
       const requestUrl = `/institutes/public?${params}`;
-      
       const response = await api.get(requestUrl);
       const data = response.data;
       
-      // Normalize the response to ensure it always has the expected structure
+      // Normalize response to ensure it always has the expected structure
       if (Array.isArray(data)) return { institutes: data };
       if (data && Array.isArray(data.institutes)) return data;
       if (data && data.data && Array.isArray(data.data)) return { institutes: data.data };
@@ -38,17 +26,16 @@ export const instituteService = {
       console.error('Error fetching institutes:', error);
       
       // === SPECIFIC TIMEOUT ERROR HANDLING ===
-      // Check for a timeout error from Axios
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        throw new Error('The request took too long. Please check your connection and try again.');
+      // Check for the specific Axios timeout error code
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('The server is taking too long to respond. Please try again.');
       }
       
-      // Check for other network errors (no response from server)
+      // Check for other network errors
       if (!error.response) {
-        throw new Error('Network error. Please check your internet connection.');
+        throw new Error('Network error. Please check your connection.');
       }
       
-      // Use the error message from the backend or a generic one
       const errorMessage = error.response?.data?.message || 'Failed to fetch institutes';
       throw new Error(errorMessage);
     }
