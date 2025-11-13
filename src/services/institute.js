@@ -25,15 +25,14 @@ export const instituteService = {
     } catch (error) {
       console.error('Error fetching institutes:', error);
       
-      // === SPECIFIC TIMEOUT ERROR HANDLING ===
-      // Check for the specific Axios timeout error code
+      // === CRITICAL FIX: Check for the specific Axios timeout error code ===
       if (error.code === 'ECONNABORTED') {
         throw new Error('The server is taking too long to respond. Please try again.');
       }
       
       // Check for other network errors
       if (!error.response) {
-        throw new Error('Network error. Please check your connection.');
+        throw new Error('Network error. Please check your connection and try again.');
       }
       
       const errorMessage = error.response?.data?.message || 'Failed to fetch institutes';

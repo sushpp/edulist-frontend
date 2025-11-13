@@ -14,7 +14,7 @@ const API_URL = process.env.REACT_APP_API_URL
 
 // =======================
 // ✅ Create and Configure Axios Instance
-// Timeout set to 60 seconds to prevent any timeout errors.
+// Timeout is set to 60 seconds to prevent any timeout errors.
 // =======================
 const api = axios.create({
   baseURL: API_URL,
