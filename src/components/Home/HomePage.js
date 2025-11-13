@@ -20,32 +20,34 @@ const HomePage = () => {
     fetchStats();
   }, []);
 
-  const fetchFeaturedInstitutes = async () => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-      const response = await instituteService.getAllInstitutes();
-      
-      // FIX: Safely handle the response and ensure we get an array
-      const institutesData = response?.institutes || response?.data || response || [];
-      
-      // FIX: Check if it's actually an array before using slice
-      if (Array.isArray(institutesData)) {
-        const featured = institutesData.slice(0, 6);
-        setFeaturedInstitutes(featured);
-      } else {
-        console.warn('Expected array for featured institutes but got:', typeof institutesData, institutesData);
-        setFeaturedInstitutes([]);
-        setFetchError('Invalid data format received from server');
-      }
-    } catch (error) {
-      console.error('Error fetching featured institutes:', error);
-      setFetchError(error.message || 'Failed to fetch institutes');
+const fetchFeaturedInstitutes = async () => {
+  setIsLoading(true);
+  setFetchError(null);
+  try {
+    const response = await instituteService.getAllInstitutes();
+    console.log('🔍 API Response:', response);
+    
+    const institutesData = response?.institutes || response?.data || response || [];
+    console.log('🔍 Institutes Data:', institutesData);
+    console.log('🔍 Is Array?', Array.isArray(institutesData));
+    
+    if (Array.isArray(institutesData)) {
+      const featured = institutesData.slice(0, 6);
+      console.log('🔍 Featured Institutes:', featured);
+      setFeaturedInstitutes(featured);
+    } else {
+      console.warn('❌ Expected array but got:', typeof institutesData, institutesData);
       setFeaturedInstitutes([]);
-    } finally {
-      setIsLoading(false);
+      setFetchError('Invalid data format received from server');
     }
-  };
+  } catch (error) {
+    console.error('❌ Error fetching featured institutes:', error);
+    setFetchError(error.message || 'Failed to fetch institutes');
+    setFeaturedInstitutes([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const fetchStats = async () => {
     setStats({ institutes: 125, reviews: 2400, students: 15000 });
