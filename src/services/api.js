@@ -1,27 +1,31 @@
+// src/services/api.js
 import axios from 'axios';
 
 // =======================
-// ✅ Base API URL
-// Auto-select between localhost and Render backend
+// ✅ Base API URL Configuration
+// Automatically switches between localhost (for development) and Render (for production)
 // =======================
 const isLocalhost = window.location.hostname === 'localhost';
 
 const API_URL = process.env.REACT_APP_API_URL
-  ? process.env.REACT_APP_API_URL.replace(/\/$/, '') // from .env if present
+  ? process.env.REACT_APP_API_URL.replace(/\/$/, '') // Use .env file if present
   : isLocalhost
-  ? 'http://localhost:5000/api' // ✅ local backend
-  : 'https://edulist-backend-clv5.onrender.com/api'; // ✅ Render backend (production)
+  ? 'http://localhost:5000/api' // Local backend URL
+  : 'https://edulist-backend-clv5.onrender.com/api'; // Production backend URL
 
 // =======================
-// ✅ Create axios instance
+// ✅ Create and Configure Axios Instance
+// Sets a 30-second timeout to handle slow connections.
 // =======================
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000, // === INCREASED TIMEOUT from 10000 to 30000 (30 seconds) ===
+  timeout: 30000, // 30 seconds
 });
 
 // =======================
-// ✅ Request interceptor (add token)
+// ✅ Request Interceptor: Add Auth Token
+// This runs before every request. It checks for a token in localStorage
+// and adds it to the request headers.
 // =======================
 api.interceptors.request.use(
   (config) => {
@@ -35,54 +39,36 @@ api.interceptors.request.use(
 );
 
 // =======================
-// ✅ Response interceptor (handle errors & fix URLs)
+// ✅ Response Interceptor: Handle Errors & Fix URLs
+// This runs after every response. It handles global errors and fixes
+// Mixed Content warnings by converting any http:// URLs from the backend to https://.
 // =======================
 api.interceptors.response.use(
   (response) => {
-    // 🔥 Global fix for Mixed Content Warning
-    // This function recursively finds any http:// URL from your backend and converts it to https://
-    const replaceHttpWithHttps = (obj) => {
-      if (!obj) return obj;
-
-      if (typeof obj === 'string') {
-        if (obj.startsWith('http://edulist-backend-clv5.onrender.com')) {
-          return obj.replace('http://', 'https://');
-        }
-        return obj;
-      }
-
-      if (Array.isArray(obj)) {
-        return obj.map(item => replaceHttpWithHttps(item));
-      }
-
-      if (typeof obj === 'object') {
-        const newObj = {};
-        for (const key in obj) {
-          newObj[key] = replaceHttpWithHttps(obj[key]);
-        }
-        return newObj;
-      }
-
-      return obj;
-    };
-
-    // Apply the fix to all response data
-    response.data = replaceHttpWithHttps(response.data);
+    // Efficient fix for Mixed Content Warnings
+    const responseStr = JSON.stringify(response.data);
+    if (responseStr.includes('http://edulist-backend-clv5.onrender.com')) {
+      const fixedStr = responseStr.replace(/http:\/\/edulist-backend-clv5\.onrender\.com/g, 'https://edulist-backend-clv5.onrender.com');
+      response.data = JSON.parse(fixedStr);
+    }
     
     return response;
   },
   (error) => {
+    // Handle specific HTTP errors
     if (error.response) {
-      // Unauthorized: clear auth and redirect
+      // If the server responds with a 401 (Unauthorized), log the user out.
       if (error.response.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
-      console.error('API Error:', error.response.data);
+      console.error('API Error Response:', error.response.data);
     } else if (error.request) {
+      // The request was made but no response was received (network error)
       console.error('API Error: No response from server', error.request);
     } else {
+      // Something else happened in setting up the request
       console.error('API Error:', error.message);
     }
     return Promise.reject(error);
@@ -90,7 +76,8 @@ api.interceptors.response.use(
 );
 
 // =======================
-// ✅ API MODULES (Corrected Endpoints)
+// ✅ API Module Exports
+// These are functions for your components to call specific endpoints.
 // =======================
 
 // Auth API
@@ -106,10 +93,8 @@ export const instituteAPI = {
   getById: (id) => api.get(`/institutes/${id}`),
   getPending: () => api.get('/institutes/admin/pending'),
   updateStatus: (id, status) => api.put(`/institutes/admin/${id}/status`, { status }),
-  // 🔥 FIXED: This was using a non-existent endpoint. Changed to the correct '/profile' route.
-  getMyInstitute: () => api.get('/institutes/profile'),
-  // 🔥 FIXED: The update route for an institute's own profile is '/profile', not '/:id'. The ID comes from the auth token.
-  update: (data) => api.put('/institutes/profile', data),
+  getMyInstitute: () => api.get('/institutes/profile'), // For an institute to see its own profile
+  update: (data) => api.put('/institutes/profile', data), // Updates its own profile
 };
 
 // Courses API
@@ -118,9 +103,7 @@ export const courseAPI = {
   getByInstitute: (instituteId) => api.get(`/courses/institute/${instituteId}`),
   update: (id, data) => api.put(`/courses/${id}`, data),
   delete: (id) => api.delete(`/courses/${id}`),
-  // 🔥 FIXED: This is a more standard endpoint name. 
-  // NOTE: Verify this matches your backend's route in `routes/courses.js`.
-  getMyCourses: () => api.get('/courses/my'),
+  getMyCourses: () => api.get('/courses/my'), // For an institute to see its courses
 };
 
 // Reviews API
@@ -175,5 +158,4 @@ export const healthAPI = {
   check: () => api.get('/health'),
 };
 
-// ✅ Export axios instance
 export default api;
