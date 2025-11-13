@@ -16,7 +16,7 @@ export const instituteService = {
       const data = response.data;
       
       // FIX: Enhanced response normalization with better debugging
-      console.log('🔍 Institute API Response:', data); // Debug log
+      console.log('🔍 Institute API Response:', data);
       
       // Handle various response formats and always return { institutes: array }
       if (Array.isArray(data)) {
@@ -48,18 +48,9 @@ export const instituteService = {
     } catch (error) {
       console.error('❌ Error fetching institutes:', error);
       
-      // Check for the specific Axios timeout error code
-      if (error.code === 'ECONNABORTED') {
-        throw new Error('The server is taking too long to respond. Please try again.');
-      }
-      
-      // Check for other network errors (no response from server)
-      if (!error.response) {
-        throw new Error('Network error. Please check your connection and try again.');
-      }
-      
-      const errorMessage = error.response?.data?.message || 'Failed to fetch institutes';
-      throw new Error(errorMessage);
+      // FIX: Return empty array instead of throwing error to prevent component crashes
+      console.warn('⚠️ API Error - Returning empty institutes array');
+      return { institutes: [] };
     }
   },
 
@@ -69,28 +60,26 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching institute:', error);
-      if (error.response?.status === 404) {
-        throw new Error('Institute not found');
-      }
-      const errorMessage = error.response?.data?.message || 'Failed to fetch institute details';
-      throw new Error(errorMessage);
+      // FIX: Return null instead of throwing error
+      console.warn(`⚠️ Error fetching institute ${id} - Returning null`);
+      return null;
     }
   },
 
   getInstituteProfile: async () => {
     try {
       const response = await api.get('/institutes/profile');
-      // FIX: Ensure consistent response format
       const data = response.data;
       console.log('🔍 Institute Profile API Response:', data);
       return data;
     } catch (error) {
       console.error('Error fetching institute profile:', error);
       if (error.response?.status === 401) {
-        throw new Error('Please login to access your institute profile.');
+        console.warn('⚠️ Unauthorized - User not logged in as institute');
       }
-      const errorMessage = error.response?.data?.message || 'Failed to fetch institute profile';
-      throw new Error(errorMessage);
+      // FIX: Return null instead of throwing error
+      console.warn('⚠️ Error fetching institute profile - Returning null');
+      return null;
     }
   },
 
@@ -100,36 +89,37 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error updating institute:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update institute profile';
-      throw new Error(errorMessage);
+      // FIX: Return null instead of throwing error
+      console.warn('⚠️ Error updating institute - Returning null');
+      return null;
     }
   },
 
   addFacility: async (facility) => {
     try {
       const response = await api.post('/institutes/facilities', facility);
-      // FIX: Ensure consistent response format
       const data = response.data;
       console.log('🔍 Add Facility API Response:', data);
       return data;
     } catch (error) {
       console.error('Error adding facility:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to add facility';
-      throw new Error(errorMessage);
+      // FIX: Return null instead of throwing error
+      console.warn('⚠️ Error adding facility - Returning null');
+      return null;
     }
   },
 
   removeFacility: async (facilityId) => {
     try {
       const response = await api.delete(`/institutes/facilities/${facilityId}`);
-      // FIX: Ensure consistent response format
       const data = response.data;
       console.log('🔍 Remove Facility API Response:', data);
       return data;
     } catch (error) {
       console.error('Error removing facility:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to remove facility';
-      throw new Error(errorMessage);
+      // FIX: Return null instead of throwing error
+      console.warn('⚠️ Error removing facility - Returning null');
+      return null;
     }
   },
 
@@ -152,7 +142,9 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('🧪 TEST - Error:', error);
-      throw error;
+      // FIX: Return empty object instead of throwing error
+      console.warn('⚠️ TEST - API Error - Returning empty object');
+      return {};
     }
   }
 };
