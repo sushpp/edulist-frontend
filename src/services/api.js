@@ -24,8 +24,6 @@ const api = axios.create({
 
 // =======================
 // ✅ Request Interceptor: Add Auth Token
-// This runs before every request. It checks for a token in localStorage
-// and adds it to the request headers.
 // =======================
 api.interceptors.request.use(
   (config) => {
@@ -40,8 +38,6 @@ api.interceptors.request.use(
 
 // =======================
 // ✅ Response Interceptor: Handle Errors & Fix URLs
-// This runs after every response. It handles global errors and fixes
-// Mixed Content warnings by converting any http:// URLs from the backend to https://.
 // =======================
 api.interceptors.response.use(
   (response) => {
@@ -55,7 +51,6 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle specific HTTP errors
     if (error.response) {
       // If the server responds with a 401 (Unauthorized), log the user out.
       if (error.response.status === 401) {
@@ -63,7 +58,7 @@ api.interceptors.response.use(
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
-      console.error('API Error Response:', error.response.data);
+      console.error('API Error:', error.response.data);
     } else if (error.request) {
       // The request was made but no response was received (network error)
       console.error('API Error: No response from server', error.request);
@@ -77,36 +72,30 @@ api.interceptors.response.use(
 
 // =======================
 // ✅ API Module Exports
-// These are functions for your components to call specific endpoints.
 // =======================
-
-// Auth API
 export const authAPI = {
   login: (email, password, role) => api.post('/auth/login', { email, password, role }),
   register: (data) => api.post('/auth/register', data),
   getCurrentUser: () => api.get('/auth/me'),
 };
 
-// Institutes API
 export const instituteAPI = {
   getAll: (filters = {}) => api.get('/institutes', { params: filters }),
   getById: (id) => api.get(`/institutes/${id}`),
   getPending: () => api.get('/institutes/admin/pending'),
   updateStatus: (id, status) => api.put(`/institutes/admin/${id}/status`, { status }),
-  getMyInstitute: () => api.get('/institutes/profile'), // For an institute to see its own profile
-  update: (data) => api.put('/institutes/profile', data), // Updates its own profile
+  getMyInstitute: () => api.get('/institutes/profile'),
+  update: (data) => api.put('/institutes/profile', data),
 };
 
-// Courses API
 export const courseAPI = {
   create: (data) => api.post('/courses', data),
   getByInstitute: (instituteId) => api.get(`/courses/institute/${instituteId}`),
   update: (id, data) => api.put(`/courses/${id}`, data),
   delete: (id) => api.delete(`/courses/${id}`),
-  getMyCourses: () => api.get('/courses/my'), // For an institute to see its courses
+  getMyCourses: () => api.get('/courses/my'),
 };
 
-// Reviews API
 export const reviewAPI = {
   create: (data) => api.post('/reviews', data),
   getByInstitute: (instituteId) => api.get(`/reviews/institute/${instituteId}`),
@@ -115,7 +104,6 @@ export const reviewAPI = {
   updateStatus: (id, status) => api.put(`/reviews/admin/${id}/status`, { status }),
 };
 
-// Enquiries API
 export const enquiryAPI = {
   create: (data) => api.post('/enquiries', data),
   getMyEnquiries: () => api.get('/enquiries/my-enquiries'),
@@ -124,13 +112,11 @@ export const enquiryAPI = {
   updateStatus: (id, status) => api.put(`/enquiries/${id}`, { status }),
 };
 
-// Users API
 export const userAPI = {
   getAll: () => api.get('/users'),
   updateStatus: (id, isActive) => api.put(`/users/${id}/status`, { isActive }),
 };
 
-// Facilities API
 export const facilitiesAPI = {
   create: (data) => api.post('/facilities', data),
   getByInstitute: (instituteId) => api.get(`/facilities/institute/${instituteId}`),
@@ -139,13 +125,11 @@ export const facilitiesAPI = {
   delete: (id) => api.delete(`/facilities/${id}`),
 };
 
-// Analytics API
 export const analyticsAPI = {
   getDashboard: () => api.get('/analytics/dashboard'),
   getUserStats: (userId) => api.get(`/analytics/user/${userId}`),
 };
 
-// File Upload API
 export const uploadAPI = {
   uploadImage: (formData) =>
     api.post('/upload/image', formData, {
@@ -153,7 +137,6 @@ export const uploadAPI = {
     }),
 };
 
-// Health Check API
 export const healthAPI = {
   check: () => api.get('/health'),
 };

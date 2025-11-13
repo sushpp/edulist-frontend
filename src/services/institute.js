@@ -8,7 +8,7 @@ import api from './api';
 export const instituteService = {
   /**
    * Fetches all public institutes with optional filters.
-   * Normalizes the API response to ensure a consistent { institutes: Array } structure.
+   * Normalizes API response to ensure a consistent { institutes: Array } structure.
    * @param {Object} [filters={}] - The query parameters for filtering institutes.
    * @returns {Promise<{institutes: Array}>} A promise that resolves to an object containing an array of institutes.
    * @throws {Error} If the request fails or the server returns an error.
@@ -24,41 +24,28 @@ export const instituteService = {
       
       const requestUrl = `/institutes/public?${params}`;
       
-      // === DEBUGGING LOG 1: Shows the full URL being requested ===
-      console.log(`Attempting to fetch from URL: ${api.defaults.baseURL}${requestUrl}`);
-      
       const response = await api.get(requestUrl);
       const data = response.data;
       
-      // === DEBUGGING LOG 2: Shows the raw data from the backend ===
-      console.log('SUCCESS: Raw API Response:', data);
-      
       // Normalize the response to ensure it always has the expected structure
-      if (Array.isArray(data)) {
-        // If the API returned a direct array, wrap it in an object
-        console.log('API returned a direct array. Wrapping it.');
-        return { institutes: data };
-      } else if (data && Array.isArray(data.institutes)) {
-        // If the API returned the expected object, use it as is
-        console.log('API returned the expected object. Using it.');
-        return data;
-      } else if (data && data.data && Array.isArray(data.data)) {
-        // Handle case where data is nested in a data property
-        console.log('API returned nested data. Extracting it.');
-        return { institutes: data.data };
-      } else {
-        // If the response is something else, return an empty array to prevent crashes
-        console.warn('Unexpected API response format. Returning empty array:', data);
-        return { institutes: [] };
-      }
-    } catch (error) {
-      // === DEBUGGING LOG 3: Shows the error object ===
-      console.error('CATCH: API call failed with error:', error);
+      if (Array.isArray(data)) return { institutes: data };
+      if (data && Array.isArray(data.institutes)) return data;
+      if (data && data.data && Array.isArray(data.data)) return { institutes: data.data };
       
-      // Check if it's a network error (no response from server)
+      console.warn('Unexpected API response format. Returning empty array.');
+      return { institutes: [] };
+    } catch (error) {
+      console.error('Error fetching institutes:', error);
+      
+      // === SPECIFIC TIMEOUT ERROR HANDLING ===
+      // Check for a timeout error from Axios
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        throw new Error('The request took too long. Please check your connection and try again.');
+      }
+      
+      // Check for other network errors (no response from server)
       if (!error.response) {
-        // This covers 'ERR_NETWORK', 'ERR_INTERNET_DISCONNECTED', etc.
-        throw new Error('Network error. Please check your connection and try again.');
+        throw new Error('Network error. Please check your internet connection.');
       }
       
       // Use the error message from the backend or a generic one
@@ -67,11 +54,7 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Fetches a single institute by its ID.
-   * @param {string} id - The ID of the institute to fetch.
-   * @returns {Promise<Object>} A promise that resolves to the institute object.
-   */
+  // ... all your other methods are correct, keep them as is.
   getInstituteById: async (id) => {
     try {
       const response = await api.get(`/institutes/${id}`);
@@ -86,10 +69,6 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Fetches the profile of the currently logged-in institute.
-   * @returns {Promise<Object>} A promise that resolves to the institute's profile data.
-   */
   getInstituteProfile: async () => {
     try {
       const response = await api.get('/institutes/profile');
@@ -104,11 +83,6 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Updates the profile of the currently logged-in institute.
-   * @param {Object} data - The data to update.
-   * @returns {Promise<Object>} A promise that resolves to the updated profile.
-   */
   updateInstitute: async (data) => {
     try {
       const response = await api.put('/institutes/profile', data);
@@ -120,11 +94,6 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Adds a new facility to the institute's profile.
-   * @param {Object} facility - The facility object to add.
-   * @returns {Promise<Object>} A promise that resolves to the updated facilities list.
-   */
   addFacility: async (facility) => {
     try {
       const response = await api.post('/institutes/facilities', facility);
@@ -136,11 +105,6 @@ export const instituteService = {
     }
   },
 
-  /**
-   * Removes a facility from the institute's profile.
-   * @param {string} facilityId - The ID of the facility to remove.
-   * @returns {Promise<Object>} A promise that resolves to the updated facilities list.
-   */
   removeFacility: async (facilityId) => {
     try {
       const response = await api.delete(`/institutes/facilities/${facilityId}`);
