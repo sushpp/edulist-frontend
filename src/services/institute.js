@@ -1,5 +1,4 @@
 // src/services/institute.js
-// Version 3.0 - Final Error Handling
 import api from './api';
 
 export const instituteService = {
@@ -16,23 +15,35 @@ export const instituteService = {
       const response = await api.get(requestUrl);
       const data = response.data;
       
-      // Normalize response
-      if (Array.isArray(data)) return { institutes: data };
-      if (data && Array.isArray(data.institutes)) return data;
-      if (data && data.data && Array.isArray(data.data)) return { institutes: data.data };
-      
-      console.warn('Unexpected API response format. Returning empty array.');
-      return { institutes: [] };
+      // Normalize response to ensure it always has the expected structure
+      if (Array.isArray(data)) {
+        // If the API returned a direct array, wrap it in an object
+        console.log('API returned a direct array. Wrapping it.');
+        return { institutes: data };
+      } else if (data && Array.isArray(data.institutes)) {
+        // If the API returned the expected object, use it as is
+        console.log('API returned the expected object. Using it.');
+        return data;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        // Handle case where data is nested in a data property
+        console.log('API returned nested data. Extracting it.');
+        return { institutes: data.data };
+      } else {
+        // If the response is something else, return an empty array to prevent crashes
+        console.warn('Unexpected API response format. Returning empty array.');
+        return { institutes: [] };
+      }
     } catch (error) {
       console.error('Error fetching institutes:', error);
       
-      // CRITICAL FIX: Check for the specific Axios timeout error code
+      // === CRITICAL FIX: Check for the specific Axios timeout error code ===
       if (error.code === 'ECONNABORTED') {
         throw new Error('The server is taking too long to respond. Please try again.');
       }
       
+      // Check for other network errors (no response from server)
       if (!error.response) {
-        throw new Error('Network error. Please check your connection.');
+        throw new Error('Network error. Please check your connection and try again.');
       }
       
       const errorMessage = error.response?.data?.message || 'Failed to fetch institutes';
