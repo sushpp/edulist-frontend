@@ -9,6 +9,35 @@ import Enquiries from './Enquiries';
 import Reviews from './Reviews';
 import './InstituteDashboard.css';
 
+// FIX: Add error boundary for child components
+const DashboardErrorBoundary = ({ children }) => {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const handleError = (error) => {
+      console.error('💥 Dashboard Error Boundary Caught:', error);
+      setHasError(true);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="error-boundary">
+        <h2>Something went wrong</h2>
+        <p>There was an error loading this section. Please try refreshing the page.</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">
+          Reload Page
+        </button>
+      </div>
+    );
+  }
+
+  return children;
+};
+
 const InstituteDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -53,12 +82,48 @@ const InstituteDashboard = () => {
         </header>
 
         <div className="dashboard-content">
+          {/* FIX: Wrap each route with error boundary */}
           <Routes>
-            <Route path="profile" element={<ProfileManagement />} />
-            <Route path="courses" element={<CourseManagement />} />
-            <Route path="facilities" element={<FacilitiesManagement />} />
-            <Route path="enquiries" element={<Enquiries />} />
-            <Route path="reviews" element={<Reviews />} />
+            <Route 
+              path="profile" 
+              element={
+                <DashboardErrorBoundary>
+                  <ProfileManagement />
+                </DashboardErrorBoundary>
+              } 
+            />
+            <Route 
+              path="courses" 
+              element={
+                <DashboardErrorBoundary>
+                  <CourseManagement />
+                </DashboardErrorBoundary>
+              } 
+            />
+            <Route 
+              path="facilities" 
+              element={
+                <DashboardErrorBoundary>
+                  <FacilitiesManagement />
+                </DashboardErrorBoundary>
+              } 
+            />
+            <Route 
+              path="enquiries" 
+              element={
+                <DashboardErrorBoundary>
+                  <Enquiries />
+                </DashboardErrorBoundary>
+              } 
+            />
+            <Route 
+              path="reviews" 
+              element={
+                <DashboardErrorBoundary>
+                  <Reviews />
+                </DashboardErrorBoundary>
+              } 
+            />
           </Routes>
         </div>
       </div>
