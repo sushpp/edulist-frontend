@@ -1,29 +1,22 @@
 // src/services/api.js
 import axios from 'axios';
 
-// =======================
-// ✅ Base API URL Configuration
-// =======================
+// Base API URL Configuration
 const isLocalhost = window.location.hostname === 'localhost';
-
 const API_URL = process.env.REACT_APP_API_URL
   ? process.env.REACT_APP_API_URL.replace(/\/$/, '')
   : isLocalhost
   ? 'http://localhost:5000/api'
   : 'https://edulist-backend-clv5.onrender.com/api';
 
-// =======================
-// ✅ Create and Configure Axios Instance
+// Create and Configure Axios Instance
 // Timeout is set to 60 seconds to prevent any timeout errors.
-// =======================
 const api = axios.create({
   baseURL: API_URL,
   timeout: 60000, // 60 seconds
 });
 
-// =======================
-// ✅ Request Interceptor: Add Auth Token
-// =======================
+// Request Interceptor: Add Auth Token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -35,9 +28,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// =======================
-// ✅ Response Interceptor: Handle Errors & Fix URLs
-// =======================
+// Response Interceptor: Handle Errors & Fix URLs
 api.interceptors.response.use(
   (response) => {
     // Fix for Mixed Content Warnings
@@ -65,9 +56,7 @@ api.interceptors.response.use(
   }
 );
 
-// =======================
-// ✅ API Module Exports
-// =======================
+// API Module Exports
 export const authAPI = {
   login: (email, password, role) => api.post('/auth/login', { email, password, role }),
   register: (data) => api.post('/auth/register', data),
