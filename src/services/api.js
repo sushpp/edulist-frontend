@@ -17,7 +17,7 @@ const API_URL = process.env.REACT_APP_API_URL
 // =======================
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000, // === INCREASED TIMEOUT from 10000 to 30000 (30 seconds) ===
 });
 
 // =======================
@@ -39,7 +39,7 @@ api.interceptors.request.use(
 // =======================
 api.interceptors.response.use(
   (response) => {
-    // 🔥 NEW: Global fix for Mixed Content Warning
+    // 🔥 Global fix for Mixed Content Warning
     // This function recursively finds any http:// URL from your backend and converts it to https://
     const replaceHttpWithHttps = (obj) => {
       if (!obj) return obj;
