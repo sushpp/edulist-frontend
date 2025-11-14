@@ -27,9 +27,21 @@ const InstituteDetail = () => {
   const [error, setError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  useEffect(() => {
-    fetchInstituteDetail();
-  }, [id]);
+// Test the corrected endpoints
+useEffect(() => {
+  const testEndpoints = async () => {
+    // Test institutes endpoint
+    const institutes = await instituteService.getAllInstitutes();
+    console.log('✅ Institutes:', institutes.institutes); // Now properly extracted
+    
+    // Test single institute
+    if (institutes.institutes.length > 0) {
+      const singleInstitute = await instituteService.getInstituteById(institutes.institutes[0]._id);
+      console.log('✅ Single Institute:', singleInstitute);
+    }
+  };
+  testEndpoints();
+}, []);
 
 // In InstituteDetail.js - fix the course fetching
 // In InstituteDetail.js - update the fetchInstituteDetail function

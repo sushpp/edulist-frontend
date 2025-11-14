@@ -12,10 +12,21 @@ const InstituteList = () => {
     category: '', city: '', minFees: '', maxFees: '', facilities: '', rating: ''
   });
 
-  useEffect(() => {
-    fetchInstitutes();
-    // eslint-disable-next-line
-  }, [filters]);
+// Test the corrected endpoints
+useEffect(() => {
+  const testEndpoints = async () => {
+    // Test institutes endpoint
+    const institutes = await instituteService.getAllInstitutes();
+    console.log('✅ Institutes:', institutes.institutes); // Now properly extracted
+    
+    // Test single institute
+    if (institutes.institutes.length > 0) {
+      const singleInstitute = await instituteService.getInstituteById(institutes.institutes[0]._id);
+      console.log('✅ Single Institute:', singleInstitute);
+    }
+  };
+  testEndpoints();
+}, []);
 
 // This part is already correct in your InstituteList.js
 const fetchInstitutes = async () => {
