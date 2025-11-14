@@ -27,19 +27,35 @@ const HomePage = () => {
       const response = await instituteService.getAllInstitutes();
       console.log('🔍 API Response:', response);
       
-      // FIX: The service returns { institutes: array } - extract the array properly
-      const institutesArray = response.institutes || [];
-      console.log('🔍 Institutes Array:', institutesArray);
+      // ENHANCED FIX: Multiple safety layers for data extraction
+      let institutesArray = [];
+      
+      // Layer 1: Check if response exists
+      if (response && typeof response === 'object') {
+        // Layer 2: Try different possible response formats
+        if (Array.isArray(response.institutes)) {
+          institutesArray = response.institutes;
+        } else if (Array.isArray(response.data)) {
+          institutesArray = response.data;
+        } else if (Array.isArray(response)) {
+          institutesArray = response;
+        } else if (response.data && Array.isArray(response.data.institutes)) {
+          institutesArray = response.data.institutes;
+        }
+      }
+      
+      console.log('🔍 Extracted Institutes Array:', institutesArray);
       console.log('🔍 Is Array?', Array.isArray(institutesArray));
       
+      // Layer 3: Final safety check before using array methods
       if (Array.isArray(institutesArray)) {
         const featured = institutesArray.slice(0, 6);
-        console.log('🔍 Featured Institutes:', featured);
+        console.log('🔍 Featured Institutes (sliced):', featured);
         setFeaturedInstitutes(featured);
       } else {
-        console.warn('❌ Expected array but got:', typeof institutesArray, institutesArray);
+        console.warn('❌ No array found in response. Response structure:', response);
         setFeaturedInstitutes([]);
-        setFetchError('Invalid data format received from server');
+        setFetchError('No institute data available');
       }
     } catch (error) {
       console.error('❌ Error fetching featured institutes:', error);
@@ -129,8 +145,8 @@ const HomePage = () => {
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              // FIX: featuredInstitutes is already an array, no need for Array.isArray check here
-              featuredInstitutes.map(institute => (
+              // FINAL SAFETY CHECK: featuredInstitutes should always be an array now
+              Array.isArray(featuredInstitutes) && featuredInstitutes.map(institute => (
                 <div key={institute._id} className="institute-card">
                   <div className="card-image">
                     <div className="image-placeholder">
