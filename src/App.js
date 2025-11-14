@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Common/Header';
@@ -16,6 +16,11 @@ import ManageUsers from './components/AdminPanel/ManageUsers';
 import AnalyticsDashboard from './components/AdminPanel/AnalyticsDashboard';
 import './App.css';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+
+// Import services for testing
+import { instituteService } from './services/institute';
+import { courseService } from './services/course';
+import api from './services/api';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -52,12 +57,72 @@ const InstituteDashboardWrapper = () => {
   );
 };
 
+// API Testing Component - Only runs once on app load
+const APITester = () => {
+  useEffect(() => {
+    const testEndpoints = async () => {
+      console.log('🧪 Testing API endpoints...');
+      
+      // Test institutes endpoint
+      try {
+        const institutes = await instituteService.getAllInstitutes();
+        console.log('✅ Institutes endpoint works:', institutes);
+      } catch (error) {
+        console.log('❌ Institutes endpoint failed:', error.message);
+      }
+      
+      // Test courses endpoints
+      try {
+        const courses = await courseService.getCoursesByInstitute();
+        console.log('✅ /courses/my endpoint works:', courses);
+      } catch (error) {
+        console.log('❌ /courses/my endpoint failed:', error.message);
+      }
+      
+      try {
+        const allCourses = await api.get('/courses');
+        console.log('✅ /courses endpoint works:', allCourses.data);
+      } catch (error) {
+        console.log('❌ /courses endpoint failed:', error.message);
+      }
+
+      // Test additional endpoints
+      try {
+        const health = await api.get('/health');
+        console.log('✅ /health endpoint works:', health.data);
+      } catch (error) {
+        console.log('❌ /health endpoint failed:', error.message);
+      }
+
+      // Test if /courses/institute/{id} exists
+      try {
+        const testInstituteCourses = await api.get('/courses/institute/test-id');
+        console.log('✅ /courses/institute/{id} endpoint works:', testInstituteCourses.data);
+      } catch (error) {
+        console.log('❌ /courses/institute/{id} endpoint failed - Status:', error.response?.status, error.message);
+      }
+
+      console.log('🧪 API testing completed');
+    };
+    
+    // Only run tests in development and if user is not on mobile
+    if (process.env.NODE_ENV === 'development' && window.innerWidth > 768) {
+      testEndpoints();
+    }
+  }, []);
+
+  return null; // This component doesn't render anything
+};
+
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
         <Router>
           <div className="App">
+            {/* API Testing - Only runs once on app load */}
+            <APITester />
+            
             <Header />
             <main className="main-content">
               <Routes>

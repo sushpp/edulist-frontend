@@ -21,6 +21,7 @@ const HomePage = () => {
   }, []);
 
 // In HomePage.js - fix the fetchFeaturedInstitutes function
+// In HomePage.js - fix the fetchFeaturedInstitutes function
 const fetchFeaturedInstitutes = async () => {
   setIsLoading(true);
   setFetchError(null);
