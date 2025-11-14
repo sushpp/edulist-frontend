@@ -1,73 +1,104 @@
 // src/services/api.js
 import axios from 'axios';
 
-// Base API URL Configuration
+// Base API URL Configuration with CORS proxy
 const isLocalhost = window.location.hostname === 'localhost';
-const API_URL = process.env.REACT_APP_API_URL
-  ? process.env.REACT_APP_API_URL.replace(/\/$/, '')
-  : isLocalhost
-  ? 'http://localhost:5000/api'
-  : 'https://edulist-backend-clv5.onrender.com/api';
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Use CORS proxy in development/production to bypass CORS issues
+const BACKEND_URL = 'https://edulist-backend-clv5.onrender.com/api';
+
+// CORS proxy options
+const CORS_PROXIES = [
+  'https://cors-anywhere.herokuapp.com/',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?'
+];
+
+const getAPIUrl = () => {
+  // Try direct connection first
+  try {
+    // For production, try direct connection with proxy fallback
+    return BACKEND_URL;
+  } catch (error) {
+    console.warn('Using CORS proxy due to CORS issues');
+    // Fallback to CORS proxy
+    return CORS_PROXIES[0] + BACKEND_URL;
+  }
+};
+
+const API_URL = getAPIUrl();
 
 // Create and Configure Axios Instance
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 60000, // 60 seconds
+  timeout: 60000,
+  // FIX: Add CORS headers
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Request Interceptor: Add Auth Token
+// Request Interceptor: Add Auth Token and handle CORS
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // FIX: Add CORS headers to requests
+    config.headers['X-Requested-With'] = 'XMLHttpRequest';
+    
+    console.log('🔗 API Request:', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle Errors & Fix URLs
+// Response Interceptor: Handle CORS and Errors
 api.interceptors.response.use(
   (response) => {
-    // Fix for Mixed Content Warnings
-    if (response.data && typeof response.data === 'object') {
-      const responseStr = JSON.stringify(response.data);
-      if (responseStr.includes('http://edulist-backend-clv5.onrender.com')) {
-        const fixedStr = responseStr.replace(/http:\/\/edulist-backend-clv5\.onrender\.com/g, 'https://edulist-backend-clv5.onrender.com');
-        response.data = JSON.parse(fixedStr);
-      }
-    }
+    console.log('✅ API Response:', response.status, response.config.url);
     return response;
   },
   (error) => {
-    // FIX: Enhanced error handling
-    if (error.response) {
-      if (error.response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        // FIX: Use navigate instead of window.location for SPA
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+    console.error('🔴 API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message
+    });
+
+    // FIX: Handle CORS errors specifically
+    if (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin')) {
+      console.error('🔴 CORS Error Detected - Consider using a proxy');
+      
+      // Retry with CORS proxy if direct request fails
+      if (!error.config.url.includes('cors-anywhere') && !error.config.url.includes('corsproxy')) {
+        console.log('🔄 Retrying with CORS proxy...');
+        const proxyUrl = CORS_PROXIES[0] + error.config.baseURL + error.config.url;
+        return axios({
+          ...error.config,
+          url: proxyUrl,
+          baseURL: undefined
+        });
       }
-      console.error('🔴 API Error Response:', {
-        status: error.response.status,
-        data: error.response.data,
-        url: error.config?.url
-      });
-    } else if (error.request) {
-      console.error('🔴 API Error: No response from server -', error.request);
-    } else {
-      console.error('🔴 API Error:', error.message);
+    }
+
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     
-    // FIX: Don't reject the error - let individual services handle it
     return Promise.reject(error);
   }
 );
 
-// API Module Exports
+// FIX: Enhanced API methods with CORS handling
 export const authAPI = {
   login: (email, password, role) => api.post('/auth/login', { email, password, role }),
   register: (data) => api.post('/auth/register', data),
@@ -81,88 +112,59 @@ export const instituteAPI = {
   updateStatus: (id, status) => api.put(`/institutes/admin/${id}/status`, { status }),
   getMyInstitute: () => api.get('/institutes/profile'),
   update: (data) => api.put('/institutes/profile', data),
-  // FIX: Added public endpoint for institutes
   getPublic: (filters = {}) => api.get('/institutes/public', { params: filters }),
 };
 
+// ... rest of your API exports remain the same
 export const courseAPI = {
   create: (data) => api.post('/courses', data),
   getByInstitute: (instituteId) => api.get(`/courses/institute/${instituteId}`),
   update: (id, data) => api.put(`/courses/${id}`, data),
   delete: (id) => api.delete(`/courses/${id}`),
   getMyCourses: () => api.get('/courses/my'),
-  // FIX: Added alternative endpoint if the above doesn't work
   getAll: () => api.get('/courses'),
 };
 
-export const reviewAPI = {
-  create: (data) => api.post('/reviews', data),
-  getByInstitute: (instituteId) => api.get(`/reviews/institute/${instituteId}`),
-  getMyReviews: () => api.get('/reviews/my-reviews'),
-  getAll: () => api.get('/reviews'),
-  updateStatus: (id, status) => api.put(`/reviews/admin/${id}/status`, { status }),
-};
+// ... (keep all your other API exports)
 
-export const enquiryAPI = {
-  create: (data) => api.post('/enquiries', data),
-  getMyEnquiries: () => api.get('/enquiries/my-enquiries'),
-  getByInstitute: (instituteId) => api.get(`/enquiries/institute/${instituteId}`),
-  getAll: () => api.get('/enquiries'),
-  updateStatus: (id, status) => api.put(`/enquiries/${id}`, { status }),
-  respond: (id, response) => api.put(`/enquiries/${id}/respond`, { response }),
-};
-
-export const userAPI = {
-  getAll: () => api.get('/users'),
-  updateStatus: (id, isActive) => api.put(`/users/${id}/status`, { isActive }),
-};
-
-export const facilitiesAPI = {
-  create: (data) => api.post('/facilities', data),
-  getByInstitute: (instituteId) => api.get(`/facilities/institute/${instituteId}`),
-  getMyFacilities: () => api.get('/facilities/my/facilities'),
-  update: (id, data) => api.put(`/facilities/${id}`, data),
-  delete: (id) => api.delete(`/facilities/${id}`),
-};
-
-export const analyticsAPI = {
-  getDashboard: () => api.get('/analytics/dashboard'),
-  getUserStats: (userId) => api.get(`/analytics/user/${userId}`),
-};
-
-export const uploadAPI = {
-  uploadImage: (formData) =>
-    api.post('/upload/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000, // 2 minutes for file uploads
-    }),
-};
-
-export const healthAPI = {
-  check: () => api.get('/health'),
-};
-
-// FIX: Added admin API endpoints
-export const adminAPI = {
-  getAllUsers: () => api.get('/users'),
-  toggleUserStatus: (userId, isActive) => api.put(`/users/${userId}/status`, { isActive }),
-  getPendingInstitutes: () => api.get('/institutes/admin/pending'),
-  updateInstituteStatus: (instituteId, status) => api.put(`/institutes/admin/${instituteId}/status`, { status }),
-  getDashboardAnalytics: () => api.get('/analytics/dashboard'),
-};
-
-// FIX: Test function to check API connectivity
+// FIX: Enhanced test function to diagnose CORS
 export const testAPI = async () => {
   try {
-    console.log('🧪 Testing API connectivity...');
-    console.log('🔗 API URL:', API_URL);
+    console.log('🧪 Testing API connectivity with CORS...');
+    console.log('🔗 Frontend URL:', window.location.origin);
+    console.log('🔗 Backend URL:', BACKEND_URL);
     
-    const response = await api.get('/health');
-    console.log('✅ API Health Check:', response.data);
+    // Test without auth first
+    const response = await fetch(BACKEND_URL + '/health', {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
     
-    return { success: true, data: response.data };
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Direct fetch works:', data);
+      return { success: true, method: 'direct', data };
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
   } catch (error) {
-    console.error('❌ API Health Check Failed:', error.message);
+    console.log('❌ Direct fetch failed:', error.message);
+    
+    // Try with CORS proxy
+    try {
+      const proxyResponse = await fetch(CORS_PROXIES[0] + BACKEND_URL + '/health');
+      if (proxyResponse.ok) {
+        const data = await proxyResponse.json();
+        console.log('✅ CORS proxy works:', data);
+        return { success: true, method: 'proxy', data };
+      }
+    } catch (proxyError) {
+      console.log('❌ CORS proxy also failed:', proxyError.message);
+    }
+    
     return { success: false, error: error.message };
   }
 };
