@@ -31,52 +31,51 @@ const InstituteDetail = () => {
     fetchInstituteDetail();
   }, [id]);
 
-// In InstituteDetail.js - update the fetchInstituteDetail function
-const fetchInstituteDetail = async () => {
-  try {
-    setError('');
-    const response = await instituteService.getAllInstitutes();
-    
-    // FIX: Extract institutes array properly
-    const institutesArray = response.institutes || [];
-    
-    if (Array.isArray(institutesArray)) {
-      const foundInstitute = institutesArray.find(inst => inst._id === id);
+  const fetchInstituteDetail = async () => {
+    try {
+      setError('');
+      const response = await instituteService.getAllInstitutes();
+      
+      // FIX: Safely handle the response - service returns { institutes: array }
+      const institutesArray = response.institutes || [];
+      
+      if (Array.isArray(institutesArray)) {
+        const foundInstitute = institutesArray.find(inst => inst._id === id);
 
-      if (foundInstitute) {
-        setInstitute(foundInstitute);
+        if (foundInstitute) {
+          setInstitute(foundInstitute);
 
-        // FIX: Use the corrected course service method
-        try {
-          const coursesData = await courseService.getInstituteCourses(foundInstitute._id);
-          setCourses(Array.isArray(coursesData) ? coursesData : []);
-        } catch (courseError) {
-          console.log('No courses found or API error');
-          setCourses([]);
-        }
+          // Fetch courses
+          try {
+            const coursesData = await courseService.getInstituteCourses(foundInstitute._id);
+            setCourses(Array.isArray(coursesData) ? coursesData : []);
+          } catch (courseError) {
+            console.log('No courses found or API error');
+            setCourses([]);
+          }
 
-        // Fetch reviews
-        try {
-          const reviewsData = await reviewService.getInstituteReviews(foundInstitute._id);
-          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-        } catch (reviewError) {
-          console.log('No reviews found');
-          setReviews([]);
+          // Fetch reviews
+          try {
+            const reviewsData = await reviewService.getInstituteReviews(foundInstitute._id);
+            setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+          } catch (reviewError) {
+            console.log('No reviews found');
+            setReviews([]);
+          }
+        } else {
+          setError('Institute not found');
         }
       } else {
-        setError('Institute not found');
+        console.warn('Expected array of institutes but got:', typeof institutesArray);
+        setError('Invalid data format received');
       }
-    } else {
-      console.warn('Expected array of institutes but got:', typeof institutesArray);
-      setError('Invalid data format received');
+    } catch (error) {
+      console.error('Error fetching institute details:', error);
+      setError('Failed to load institute details');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching institute details:', error);
-    setError('Failed to load institute details');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleReviewSubmit = async (reviewData) => {
     try {

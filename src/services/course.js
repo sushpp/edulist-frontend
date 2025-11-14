@@ -45,26 +45,41 @@ const courseService = {
   },
 
   // Create a new course
-// src/services/courseService.js - Fix the 500 error
+// In courseService.createCourse - add detailed logging
 createCourse: async (courseData) => {
   try {
     console.log('🔍 Course Data being sent:', courseData);
     
-    // FIX: Test with minimal data first to avoid 500 errors
-    const minimalData = {
-      title: courseData.title,
-      description: courseData.description,
-      duration: courseData.duration,
-      fees: Number(courseData.fees), // Ensure fees is a number
-      category: courseData.category,
-      // Skip image and complex arrays for now
-      // facilities: courseData.facilities || [],
-      // syllabus: courseData.syllabus || []
-    };
+    // Use FormData for file uploads
+    const formData = new FormData();
     
-    console.log('🧪 Testing with minimal data:', minimalData);
+    // Enhanced FormData handling with safety checks
+    for (const key in courseData) {
+      if (courseData[key] !== null && courseData[key] !== undefined) {
+        if (key === 'facilities' || key === 'syllabus') {
+          // Ensure we're always stringifying valid arrays
+          const arrayData = Array.isArray(courseData[key]) ? courseData[key] : [];
+          formData.append(key, JSON.stringify(arrayData));
+          console.log(`📦 ${key}:`, arrayData);
+        } else if (key === 'image' && courseData[key] instanceof File) {
+          formData.append(key, courseData[key]);
+          console.log(`🖼️ ${key}:`, courseData[key].name, courseData[key].size);
+        } else {
+          formData.append(key, String(courseData[key]));
+          console.log(`📝 ${key}:`, courseData[key]);
+        }
+      }
+    }
     
-    const response = await api.post('/courses', minimalData);
+    // Log FormData contents
+    console.log('📤 FormData entries:');
+    for (let pair of formData.entries()) {
+      console.log(pair[0] + ': ', pair[1]);
+    }
+    
+    const response = await api.post('/courses', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     
     const data = response.data;
     console.log('✅ Create Course API Response:', data);
@@ -73,15 +88,18 @@ createCourse: async (courseData) => {
   } catch (error) {
     console.error("❌ Error in courseService.createCourse:", error);
     
-    // Enhanced error logging for 500 errors
+    // FIX: Enhanced error logging for 500 errors
     if (error.response?.status === 500) {
       console.error('🔴 Backend 500 Error Details:', {
         url: error.config?.url,
         method: error.config?.method,
+        data: error.config?.data,
         backendError: error.response?.data
       });
     }
     
+    // FIX: Return null instead of throwing error
+    console.warn('⚠️ Error creating course - Returning null');
     return null;
   }
 },
@@ -139,60 +157,63 @@ createCourse: async (courseData) => {
   },
 
   // FIX: SIMPLIFIED method to get courses by institute ID
-// In courseService.js - fix the getInstituteCourses method
-getInstituteCourses: async (instituteId) => {
-  try {
-    // FIX: Use the correct endpoint that exists
-    // Option 1: Try this endpoint first
-    const response = await api.get(`/courses?institute=${instituteId}`);
-    const data = response.data;
-    
-    console.log('🔍 Institute Courses API Response:', data);
-    
-    // Enhanced response normalization
-    if (Array.isArray(data)) {
-      return data;
-    } else if (data && Array.isArray(data.courses)) {
-      return data.courses;
-    } else if (data && data.data && Array.isArray(data.data)) {
-      return data.data;
-    } else {
-      console.warn('❌ Unexpected API response format for institute courses. Returning empty array.');
-      return [];
-    }
-    
-  } catch (error) {
-    console.error("❌ Error in courseService.getInstituteCourses:", error);
-    
-    // If the first endpoint fails, try alternative approaches
+  getInstituteCourses: async (instituteId) => {
     try {
-      console.log('🔄 Trying alternative endpoint...');
+      // FIX: Try multiple endpoint patterns to find what works
+      let coursesData = [];
       
-      // Option 2: Get all courses and filter by institute
-      const allCoursesResponse = await api.get('/courses');
-      const allCourses = allCoursesResponse.data;
-      
-      let coursesArray = [];
-      if (Array.isArray(allCourses)) {
-        coursesArray = allCourses;
-      } else if (allCourses && Array.isArray(allCourses.courses)) {
-        coursesArray = allCourses.courses;
+      // Try endpoint 1: /courses with institute filter
+      try {
+        const response1 = await api.get(`/courses?institute=${instituteId}`);
+        const data1 = response1.data;
+        console.log('🔍 Institute Courses API Response (Endpoint 1):', data1);
+        
+        if (Array.isArray(data1)) {
+          coursesData = data1;
+        } else if (data1 && Array.isArray(data1.courses)) {
+          coursesData = data1.courses;
+        } else if (data1 && data1.data && Array.isArray(data1.data)) {
+          coursesData = data1.data;
+        }
+      } catch (error) {
+        console.log('❌ Endpoint 1 failed, trying alternative...');
       }
       
-      // Filter courses by institute ID
-      const instituteCourses = coursesArray.filter(course => 
-        course.institute && course.institute._id === instituteId
-      );
+      // If first endpoint failed or returned no data, try endpoint 2: get all and filter
+      if (!coursesData || coursesData.length === 0) {
+        try {
+          const response2 = await api.get('/courses');
+          const data2 = response2.data;
+          console.log('🔍 All Courses API Response (Endpoint 2):', data2);
+          
+          // Extract courses array from response
+          let allCourses = [];
+          if (Array.isArray(data2)) {
+            allCourses = data2;
+          } else if (data2 && Array.isArray(data2.courses)) {
+            allCourses = data2.courses;
+          } else if (data2 && data2.data && Array.isArray(data2.data)) {
+            allCourses = data2.data;
+          }
+          
+          // Filter courses by institute ID
+          coursesData = allCourses.filter(course => 
+            course && course.institute && course.institute._id === instituteId
+          );
+        } catch (error) {
+          console.log('❌ Endpoint 2 also failed');
+        }
+      }
       
-      console.log(`🔍 Filtered courses for institute ${instituteId}:`, instituteCourses);
-      return instituteCourses;
+      console.log(`🔍 Final courses for institute ${instituteId}:`, coursesData);
+      return Array.isArray(coursesData) ? coursesData : [];
       
-    } catch (fallbackError) {
-      console.error("❌ Fallback also failed:", fallbackError);
+    } catch (error) {
+      console.error("❌ Error in courseService.getInstituteCourses:", error);
+      // FIX: Return empty array on error to prevent crashes
       return [];
     }
-  }
-},
+  },
 
   // FIX: Added method to get course by ID
   getCourseById: async (courseId) => {
