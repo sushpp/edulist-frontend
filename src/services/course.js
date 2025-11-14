@@ -45,43 +45,46 @@ const courseService = {
   },
 
   // Create a new course
-  createCourse: async (courseData) => {
-    try {
-      // Use FormData for file uploads
-      const formData = new FormData();
-      
-      // FIX: Enhanced FormData handling with safety checks
-      for (const key in courseData) {
-        if (courseData[key] !== null && courseData[key] !== undefined) {
-          if (key === 'facilities' || key === 'syllabus') {
-            // FIX: Ensure we're always stringifying valid arrays
-            const arrayData = Array.isArray(courseData[key]) ? courseData[key] : [];
-            formData.append(key, JSON.stringify(arrayData));
-          } else if (key === 'image' && courseData[key] instanceof File) {
-            formData.append(key, courseData[key]);
-          } else {
-            formData.append(key, String(courseData[key]));
-          }
-        }
-      }
-      
-      const response = await api.post('/courses', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+// src/services/courseService.js - Fix the 500 error
+createCourse: async (courseData) => {
+  try {
+    console.log('🔍 Course Data being sent:', courseData);
+    
+    // FIX: Test with minimal data first to avoid 500 errors
+    const minimalData = {
+      title: courseData.title,
+      description: courseData.description,
+      duration: courseData.duration,
+      fees: Number(courseData.fees), // Ensure fees is a number
+      category: courseData.category,
+      // Skip image and complex arrays for now
+      // facilities: courseData.facilities || [],
+      // syllabus: courseData.syllabus || []
+    };
+    
+    console.log('🧪 Testing with minimal data:', minimalData);
+    
+    const response = await api.post('/courses', minimalData);
+    
+    const data = response.data;
+    console.log('✅ Create Course API Response:', data);
+    return data;
+    
+  } catch (error) {
+    console.error("❌ Error in courseService.createCourse:", error);
+    
+    // Enhanced error logging for 500 errors
+    if (error.response?.status === 500) {
+      console.error('🔴 Backend 500 Error Details:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        backendError: error.response?.data
       });
-      
-      // FIX: Normalize response format
-      const data = response.data;
-      console.log('🔍 Create Course API Response:', data);
-      return data;
-      
-    } catch (error) {
-      console.error("❌ Error in courseService.createCourse:", error);
-      // FIX: Return null instead of throwing error
-      console.warn('⚠️ Error creating course - Returning null');
-      return null;
     }
-  },
-
+    
+    return null;
+  }
+},
   // Update an existing course
   updateCourse: async (courseId, courseData) => {
     try {

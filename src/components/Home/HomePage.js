@@ -27,7 +27,7 @@ const HomePage = () => {
       const response = await instituteService.getAllInstitutes();
       console.log('🔍 API Response:', response);
       
-      // FIX: The service returns { institutes: array } - extract the array properly
+      // FIX: Service now returns { institutes: array } - extract properly
       const institutesArray = response.institutes || [];
       console.log('🔍 Institutes Array:', institutesArray);
       console.log('🔍 Is Array?', Array.isArray(institutesArray));
@@ -129,9 +129,8 @@ const HomePage = () => {
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              // FIX: featuredInstitutes is already an array, no need for Array.isArray check here
               featuredInstitutes.map(institute => (
-                <div key={institute._id} className="institute-card">
+                <div key={institute._id || institute.id} className="institute-card">
                   <div className="card-image">
                     <div className="image-placeholder">
                       {institute.name?.charAt(0).toUpperCase() || 'I'}

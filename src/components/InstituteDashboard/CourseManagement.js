@@ -34,7 +34,6 @@ const CourseManagement = () => {
       setCourses(coursesData);
     } catch (error) {
       console.error('Error fetching courses:', error);
-      // Set to empty array on error to prevent crashes
       setCourses([]); 
     }
   };
@@ -44,30 +43,66 @@ const CourseManagement = () => {
     setLoading(true);
     
     try {
+      // FIX: Enhanced debugging for 500 errors
+      console.log('🔍 Course Form Data:', formData);
+      
+      // FIX: Validate required fields
+      const requiredFields = ['title', 'description', 'duration', 'fees', 'category'];
+      const missingFields = requiredFields.filter(field => !formData[field]);
+      
+      if (missingFields.length > 0) {
+        alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+        setLoading(false);
+        return;
+      }
+
+      // FIX: Ensure fees is a number
+      const courseData = {
+        ...formData,
+        fees: Number(formData.fees) || 0
+      };
+
+      console.log('📤 Sending course data:', courseData);
+
+      let result;
       if (editingCourse) {
-        await courseService.updateCourse(editingCourse._id, formData);
+        result = await courseService.updateCourse(editingCourse._id, courseData);
       } else {
-        await courseService.createCourse(formData);
+        result = await courseService.createCourse(courseData);
+      }
+
+      console.log('✅ Course save result:', result);
+
+      if (result) {
+        setShowForm(false);
+        setEditingCourse(null);
+        setFormData({
+          title: '',
+          description: '',
+          duration: '',
+          fees: '',
+          category: '',
+          facilities: [],
+          eligibility: '',
+          syllabus: [],
+          image: null
+        });
+        setImagePreview(null);
+        fetchCourses();
+        alert(editingCourse ? 'Course updated successfully!' : 'Course created successfully!');
+      } else {
+        alert('Failed to save course. Please check the console for details.');
       }
       
-      setShowForm(false);
-      setEditingCourse(null);
-      setFormData({
-        title: '',
-        description: '',
-        duration: '',
-        fees: '',
-        category: '',
-        facilities: [],
-        eligibility: '',
-        syllabus: [],
-        image: null
-      });
-      setImagePreview(null);
-      fetchCourses();
     } catch (error) {
-      console.error('Error saving course:', error);
-      alert('Error saving course. Please try again.');
+      console.error('❌ Error saving course:', error);
+      
+      // FIX: Enhanced error messaging for 500 errors
+      if (error.response?.status === 500) {
+        alert('Server error (500). Please check if all required fields are filled correctly and try again.');
+      } else {
+        alert('Error saving course. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -81,10 +116,8 @@ const CourseManagement = () => {
       duration: course.duration || '',
       fees: course.fees || '',
       category: course.category || '',
-      // FIX: Ensure facilities is always an array
       facilities: Array.isArray(course.facilities) ? course.facilities : [],
       eligibility: course.eligibility || '',
-      // FIX: Ensure syllabus is always an array
       syllabus: Array.isArray(course.syllabus) ? course.syllabus : [],
       image: null
     });
@@ -95,8 +128,13 @@ const CourseManagement = () => {
   const handleDelete = async (courseId) => {
     if (window.confirm('Are you sure you want to delete this course?')) {
       try {
-        await courseService.deleteCourse(courseId);
-        fetchCourses();
+        const result = await courseService.deleteCourse(courseId);
+        if (result) {
+          fetchCourses();
+          alert('Course deleted successfully!');
+        } else {
+          alert('Failed to delete course.');
+        }
       } catch (error) {
         console.error('Error deleting course:', error);
         alert('Error deleting course. Please try again.');
@@ -107,6 +145,16 @@ const CourseManagement = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // FIX: Validate file size and type
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file');
+        return;
+      }
+      
       setFormData(prev => ({ ...prev, image: file }));
       
       const reader = new FileReader();
@@ -120,7 +168,6 @@ const CourseManagement = () => {
   const addFacility = () => {
     setFormData(prev => ({
       ...prev,
-      // FIX: Ensure facilities is always an array before spreading
       facilities: [...(Array.isArray(prev.facilities) ? prev.facilities : []), '']
     }));
   };
@@ -128,7 +175,6 @@ const CourseManagement = () => {
   const updateFacility = (index, value) => {
     setFormData(prev => ({
       ...prev,
-      // FIX: Added array safety check
       facilities: Array.isArray(prev.facilities) 
         ? prev.facilities.map((fac, i) => i === index ? value : fac)
         : []
@@ -138,23 +184,56 @@ const CourseManagement = () => {
   const removeFacility = (index) => {
     setFormData(prev => ({
       ...prev,
-      // FIX: Added array safety check
       facilities: Array.isArray(prev.facilities) 
         ? prev.facilities.filter((_, i) => i !== index)
         : []
     }));
   };
 
+  // FIX: Test function to debug course creation
+  const testCourseCreation = async () => {
+    console.log('🧪 Testing course creation with minimal data...');
+    
+    const testData = {
+      title: 'Test Course',
+      description: 'This is a test course',
+      duration: '6 months',
+      fees: 10000,
+      category: 'coaching'
+    };
+    
+    try {
+      const result = await courseService.createCourse(testData);
+      console.log('🧪 Test result:', result);
+      if (result) {
+        alert('Test course created successfully!');
+        fetchCourses();
+      }
+    } catch (error) {
+      console.error('🧪 Test failed:', error);
+    }
+  };
+
   return (
     <div className="course-management">
       <div className="page-header">
         <h2>Course Management</h2>
-        <button 
-          onClick={() => setShowForm(true)}
-          className="btn btn-primary"
-        >
-          + Add New Course
-        </button>
+        <div className="header-actions">
+          <button 
+            onClick={() => setShowForm(true)}
+            className="btn btn-primary"
+          >
+            + Add New Course
+          </button>
+          {/* FIX: Temporary debug button */}
+          <button 
+            onClick={testCourseCreation}
+            className="btn btn-outline"
+            style={{ marginLeft: '10px' }}
+          >
+            🧪 Test Create
+          </button>
+        </div>
       </div>
 
       {/* Course Form Modal */}
@@ -181,6 +260,7 @@ const CourseManagement = () => {
                   setImagePreview(null);
                 }}
                 className="close-button"
+                type="button"
               >
                 ×
               </button>
@@ -195,6 +275,7 @@ const CourseManagement = () => {
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                     required
+                    placeholder="Enter course title"
                   />
                 </div>
 
@@ -233,6 +314,8 @@ const CourseManagement = () => {
                     value={formData.fees}
                     onChange={(e) => setFormData(prev => ({ ...prev, fees: e.target.value }))}
                     required
+                    min="0"
+                    step="100"
                   />
                 </div>
               </div>
@@ -244,6 +327,7 @@ const CourseManagement = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows="3"
                   required
+                  placeholder="Describe the course in detail"
                 />
               </div>
 
@@ -273,7 +357,6 @@ const CourseManagement = () => {
 
               <div className="form-group">
                 <label>Facilities</label>
-                {/* FIX: Added array safety check for facilities mapping */}
                 {Array.isArray(formData.facilities) && formData.facilities.map((facility, index) => (
                   <div key={index} className="facility-input">
                     <input
@@ -327,7 +410,6 @@ const CourseManagement = () => {
 
       {/* Courses List */}
       <div className="courses-list">
-        {/* FIX: Enhanced empty state check */}
         {!courses || courses.length === 0 ? (
           <div className="empty-state">
             <p>No courses added yet</p>
@@ -340,7 +422,6 @@ const CourseManagement = () => {
           </div>
         ) : (
           <div className="courses-grid">
-            {/* FIX: Added comprehensive array safety check */}
             {Array.isArray(courses) && courses.map(course => (
               <div key={course._id || course.id} className="course-card">
                 <div className="course-header">
@@ -378,12 +459,10 @@ const CourseManagement = () => {
                   )}
                 </div>
 
-                {/* FIX: Enhanced facilities safety check */}
                 {course.facilities && Array.isArray(course.facilities) && course.facilities.length > 0 && (
                   <div className="course-facilities">
                     <strong>Facilities:</strong>
                     <div className="facilities-tags">
-                      {/* FIX: Added array safety check for nested mapping */}
                       {Array.isArray(course.facilities) && course.facilities.map((facility, index) => (
                         <span key={index} className="facility-tag">
                           {facility}

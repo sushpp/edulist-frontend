@@ -15,42 +15,40 @@ export const instituteService = {
       const response = await api.get(requestUrl);
       const data = response.data;
       
-      // FIX: Enhanced response normalization with better debugging
       console.log('🔍 Institute API Response:', data);
       
-      // Handle various response formats and always return THE ARRAY directly
+      // FIX: Always return { institutes: array } for consistency
+      let institutesArray = [];
+      
       if (Array.isArray(data)) {
         console.log('📦 API returned direct array');
-        return data; // Return array directly
+        institutesArray = data;
       } else if (data && Array.isArray(data.institutes)) {
         console.log('📦 API returned { institutes: array }');
-        return data.institutes; // Extract and return array
+        institutesArray = data.institutes;
       } else if (data && data.data && Array.isArray(data.data)) {
         console.log('📦 API returned { data: array }');
-        return data.data; // Extract and return array
+        institutesArray = data.data;
       } else if (data && data.data && Array.isArray(data.data.institutes)) {
         console.log('📦 API returned { data: { institutes: array } }');
-        return data.data.institutes; // Extract and return array
+        institutesArray = data.data.institutes;
       } else if (data && typeof data === 'object') {
         // Try to find any array property in the response
         const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]));
         if (arrayKeys.length > 0) {
           console.log(`📦 Found array in property: ${arrayKeys[0]}`);
-          return data[arrayKeys[0]]; // Return the found array
+          institutesArray = data[arrayKeys[0]];
         }
       }
       
-      // If no array found, return empty array
-      console.warn('❌ Unexpected API response format. No array found. Returning empty array.');
-      console.warn('Response structure:', typeof data, data);
-      return []; // Return empty array directly
+      // FIX: Return consistent format { institutes: array }
+      return { institutes: institutesArray };
       
     } catch (error) {
       console.error('❌ Error fetching institutes:', error);
-      
-      // FIX: Return empty array instead of throwing error to prevent component crashes
       console.warn('⚠️ API Error - Returning empty institutes array');
-      return []; // Return empty array directly
+      // FIX: Return consistent format even on error
+      return { institutes: [] };
     }
   },
 
@@ -60,7 +58,6 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching institute:', error);
-      // FIX: Return null instead of throwing error
       console.warn(`⚠️ Error fetching institute ${id} - Returning null`);
       return null;
     }
@@ -77,7 +74,6 @@ export const instituteService = {
       if (error.response?.status === 401) {
         console.warn('⚠️ Unauthorized - User not logged in as institute');
       }
-      // FIX: Return null instead of throwing error
       console.warn('⚠️ Error fetching institute profile - Returning null');
       return null;
     }
@@ -89,7 +85,6 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('Error updating institute:', error);
-      // FIX: Return null instead of throwing error
       console.warn('⚠️ Error updating institute - Returning null');
       return null;
     }
@@ -103,7 +98,6 @@ export const instituteService = {
       return data;
     } catch (error) {
       console.error('Error adding facility:', error);
-      // FIX: Return null instead of throwing error
       console.warn('⚠️ Error adding facility - Returning null');
       return null;
     }
@@ -117,13 +111,11 @@ export const instituteService = {
       return data;
     } catch (error) {
       console.error('Error removing facility:', error);
-      // FIX: Return null instead of throwing error
       console.warn('⚠️ Error removing facility - Returning null');
       return null;
     }
   },
 
-  // FIX: Added a test method to check API response format
   testApiResponse: async () => {
     try {
       const response = await api.get('/institutes/public');
@@ -142,7 +134,6 @@ export const instituteService = {
       return response.data;
     } catch (error) {
       console.error('🧪 TEST - Error:', error);
-      // FIX: Return empty object instead of throwing error
       console.warn('⚠️ TEST - API Error - Returning empty object');
       return {};
     }
