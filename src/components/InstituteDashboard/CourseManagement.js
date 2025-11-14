@@ -27,9 +27,12 @@ const CourseManagement = () => {
   const fetchCourses = async () => {
     try {
       const data = await courseService.getCoursesByInstitute();
-      setCourses(Array.isArray(data) ? data : []);
+      // FIX: Enhanced array safety
+      const coursesData = Array.isArray(data) ? data : [];
+      setCourses(coursesData);
+      console.log('📚 Courses loaded:', coursesData.length);
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error('❌ Error fetching courses:', error);
       setCourses([]); 
     }
   };
@@ -84,7 +87,7 @@ const CourseManagement = () => {
       
     } catch (error) {
       console.error('❌ Error saving course:', error);
-      alert('Error saving course. Please try again.');
+      alert('Error saving course. Please check the console for details.');
     } finally {
       setLoading(false);
     }
@@ -129,6 +132,8 @@ const CourseManagement = () => {
         if (result) {
           fetchCourses();
           alert('Course deleted successfully!');
+        } else {
+          alert('Failed to delete course. Please try again.');
         }
       } catch (error) {
         console.error('Error deleting course:', error);
@@ -184,31 +189,32 @@ const CourseManagement = () => {
     }));
   };
 
-  // Test with JSON instead of FormData
-  const testJsonCourseCreation = async () => {
-    console.log('🧪 Testing course creation with JSON data...');
+  // FIX: Test with minimal data first
+  const testMinimalCourseCreation = async () => {
+    console.log('🧪 Testing course creation with minimal data...');
     
     const testData = {
       title: 'Test Course ' + Date.now(),
       description: 'This is a test course description',
       duration: '6 months',
       fees: 10000,
-      category: 'coaching',
-      eligibility: '12th grade',
-      facilities: ['Library', 'Lab'],
-      syllabus: ['Module 1', 'Module 2']
+      category: 'coaching'
+      // Skip optional fields for testing
     };
     
     try {
-      const result = await courseService.createCourseJson(testData);
+      console.log('📤 Sending test data:', testData);
+      const result = await courseService.createCourse(testData);
       console.log('🧪 Test result:', result);
       if (result) {
         alert('Test course created successfully!');
         fetchCourses();
+      } else {
+        alert('Test failed - no result returned');
       }
     } catch (error) {
       console.error('🧪 Test failed:', error);
-      alert('Test failed: ' + error.message);
+      alert('Test failed: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -224,11 +230,11 @@ const CourseManagement = () => {
             + Add New Course
           </button>
           <button 
-            onClick={testJsonCourseCreation}
+            onClick={testMinimalCourseCreation}
             className="btn btn-outline"
             style={{ marginLeft: '10px' }}
           >
-            🧪 Test JSON
+            🧪 Test Minimal
           </button>
         </div>
       </div>
@@ -343,6 +349,7 @@ const CourseManagement = () => {
 
               <div className="form-group">
                 <label>Facilities</label>
+                {/* FIX: Added array safety check */}
                 {Array.isArray(formData.facilities) && formData.facilities.map((facility, index) => (
                   <div key={index} className="facility-input">
                     <input
@@ -396,7 +403,8 @@ const CourseManagement = () => {
 
       {/* Courses List */}
       <div className="courses-list">
-        {!courses || courses.length === 0 ? (
+        {/* FIX: Enhanced empty state check */}
+        {!courses || !Array.isArray(courses) || courses.length === 0 ? (
           <div className="empty-state">
             <p>No courses added yet</p>
             <button 
@@ -408,10 +416,11 @@ const CourseManagement = () => {
           </div>
         ) : (
           <div className="courses-grid">
+            {/* FIX: Added array safety check */}
             {Array.isArray(courses) && courses.map(course => (
-              <div key={course._id} className="course-card">
+              <div key={course._id || course.id} className="course-card">
                 <div className="course-header">
-                  <h3>{course.title}</h3>
+                  <h3>{course.title || 'Untitled Course'}</h3>
                   <div className="course-actions">
                     <button 
                       onClick={() => handleEdit(course)}
@@ -445,11 +454,13 @@ const CourseManagement = () => {
                   )}
                 </div>
 
+                {/* FIX: Enhanced facilities safety check */}
                 {course.facilities && Array.isArray(course.facilities) && course.facilities.length > 0 && (
                   <div className="course-facilities">
                     <strong>Facilities:</strong>
                     <div className="facilities-tags">
-                      {course.facilities.map((facility, index) => (
+                      {/* FIX: Added array safety check */}
+                      {Array.isArray(course.facilities) && course.facilities.map((facility, index) => (
                         <span key={index} className="facility-tag">
                           {facility}
                         </span>

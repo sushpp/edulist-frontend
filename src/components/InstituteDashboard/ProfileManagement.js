@@ -17,24 +17,23 @@ const ProfileManagement = () => {
     fetchInstituteProfile();
   }, []);
 
+  // FIX: This should be a function, not a method definition
   const fetchInstituteProfile = async () => {
     try {
       const data = await instituteService.getInstituteProfile();
-      // FIX: Ensure data is an object and has proper structure
-      const safeData = data || {};
-      setInstitute(safeData);
-      setFormData(safeData);
+      setInstitute(data);
+      setFormData(data);
     } catch (error) {
       console.error('Error fetching institute profile:', error);
       setMessage('Error loading profile');
-      // Set a default object with proper structure
+      // Set a default object on error to prevent blank screen
       const defaultInstitute = {
         name: '',
         category: '',
         affiliation: '',
         description: '',
-        contact: {},
-        address: {},
+        contact: { email: '', phone: '', website: '' },
+        address: { street: '', city: '', state: '', pincode: '' },
         images: [],
         logo: null
       };
@@ -92,12 +91,14 @@ const ProfileManagement = () => {
         setFormData(prev => ({ ...prev, logo: imageData }));
       } else if (imageType === 'institute') {
         // FIX: Ensure images is always an array
-        const currentImages = Array.isArray(prev.images) ? prev.images : [];
-        const newImage = { ...imageData, isPrimary: currentImages.length === 0 };
-        setFormData(prev => ({ 
-          ...prev, 
-          images: [...currentImages, newImage] 
-        }));
+        setFormData(prev => {
+          const currentImages = Array.isArray(prev.images) ? prev.images : [];
+          const newImage = { ...imageData, isPrimary: currentImages.length === 0 };
+          return { 
+            ...prev, 
+            images: [...currentImages, newImage] 
+          };
+        });
       }
 
       setMessage('Image uploaded successfully!');

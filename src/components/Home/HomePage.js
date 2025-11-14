@@ -39,25 +39,28 @@ const fetchFeaturedInstitutes = async () => {
     const response = await instituteService.getAllInstitutes();
     console.log('🔍 API Response:', response);
     
-    // FIX: Extract institutes array from response
-    const institutesArray = response.institutes || []; // NOT response.data.institutes
-    
+    // FIX: Extract institutes array from response object
+    const institutesArray = response.institutes || [];
     console.log('🔍 Institutes Array:', institutesArray);
+    console.log('🔍 Is Array?', Array.isArray(institutesArray));
     
     if (Array.isArray(institutesArray)) {
       const featured = institutesArray.slice(0, 6);
+      console.log('🔍 Featured Institutes:', featured);
       setFeaturedInstitutes(featured);
     } else {
+      console.warn('❌ Expected array but got:', typeof institutesArray, institutesArray);
       setFeaturedInstitutes([]);
+      setFetchError('Invalid data format received from server');
     }
   } catch (error) {
-    console.error('Error fetching featured institutes:', error);
+    console.error('❌ Error fetching featured institutes:', error);
+    setFetchError(error.message || 'Failed to fetch institutes');
     setFeaturedInstitutes([]);
   } finally {
     setIsLoading(false);
   }
 };
-
   const fetchStats = async () => {
     setStats({ institutes: 125, reviews: 2400, students: 15000 });
   };
