@@ -20,51 +20,32 @@ const HomePage = () => {
     fetchStats();
   }, []);
 
-  const fetchFeaturedInstitutes = async () => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-      const response = await instituteService.getAllInstitutes();
-      console.log('🔍 API Response:', response);
-      
-      // ENHANCED FIX: Multiple safety layers for data extraction
-      let institutesArray = [];
-      
-      // Layer 1: Check if response exists
-      if (response && typeof response === 'object') {
-        // Layer 2: Try different possible response formats
-        if (Array.isArray(response.institutes)) {
-          institutesArray = response.institutes;
-        } else if (Array.isArray(response.data)) {
-          institutesArray = response.data;
-        } else if (Array.isArray(response)) {
-          institutesArray = response;
-        } else if (response.data && Array.isArray(response.data.institutes)) {
-          institutesArray = response.data.institutes;
-        }
-      }
-      
-      console.log('🔍 Extracted Institutes Array:', institutesArray);
-      console.log('🔍 Is Array?', Array.isArray(institutesArray));
-      
-      // Layer 3: Final safety check before using array methods
-      if (Array.isArray(institutesArray)) {
-        const featured = institutesArray.slice(0, 6);
-        console.log('🔍 Featured Institutes (sliced):', featured);
-        setFeaturedInstitutes(featured);
-      } else {
-        console.warn('❌ No array found in response. Response structure:', response);
-        setFeaturedInstitutes([]);
-        setFetchError('No institute data available');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching featured institutes:', error);
-      setFetchError(error.message || 'Failed to fetch institutes');
+// In HomePage.js - VERIFY this is correct
+const fetchFeaturedInstitutes = async () => {
+  setIsLoading(true);
+  setFetchError(null);
+  try {
+    const response = await instituteService.getAllInstitutes();
+    console.log('🔍 API Response:', response);
+    
+    // FIX: Extract institutes array from response
+    const institutesArray = response.institutes || []; // NOT response.data.institutes
+    
+    console.log('🔍 Institutes Array:', institutesArray);
+    
+    if (Array.isArray(institutesArray)) {
+      const featured = institutesArray.slice(0, 6);
+      setFeaturedInstitutes(featured);
+    } else {
       setFeaturedInstitutes([]);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching featured institutes:', error);
+    setFeaturedInstitutes([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const fetchStats = async () => {
     setStats({ institutes: 125, reviews: 2400, students: 15000 });

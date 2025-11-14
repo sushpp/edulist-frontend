@@ -7,61 +7,144 @@ const courseService = {
       const response = await api.get('/courses/my');
       const data = response.data;
       
-      if (Array.isArray(data)) {
-        return data;
-      } else if (data && Array.isArray(data.courses)) {
+      console.log('🔍 Course API Response:', data);
+      
+      // Your backend returns { success: true, courses: [...] }
+      if (data && Array.isArray(data.courses)) {
+        console.log('📦 API returned { courses: array }');
         return data.courses;
+      } else if (Array.isArray(data)) {
+        console.log('📦 API returned direct array');
+        return data;
       } else if (data && data.data && Array.isArray(data.data)) {
+        console.log('📦 API returned { data: array }');
         return data.data;
-      } else {
-        return [];
       }
+      
+      console.warn('❌ Unexpected API response format for courses. Returning empty array.');
+      return [];
+      
     } catch (error) {
-      console.error("Error fetching courses:", error);
+      console.error("❌ Error in courseService.getCoursesByInstitute:", error);
       return [];
     }
   },
 
-  // Create a new course - SIMPLIFIED VERSION
+  // Get courses by institute ID (for public viewing) - FIXED ENDPOINT
+  getInstituteCourses: async (instituteId) => {
+    try {
+      // FIX: Use the correct endpoint with instituteId parameter
+      const response = await api.get(`/courses/institute/${instituteId}`);
+      const data = response.data;
+      
+      console.log('🔍 Institute Courses API Response:', data);
+      
+      // Your backend returns { success: true, courses: [...] }
+      if (data && Array.isArray(data.courses)) {
+        console.log('📦 API returned { courses: array }');
+        return data.courses;
+      } else if (Array.isArray(data)) {
+        return data;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        return data.data;
+      }
+      
+      console.warn('❌ Unexpected API response format for institute courses. Returning empty array.');
+      return [];
+      
+    } catch (error) {
+      console.error("❌ Error in courseService.getInstituteCourses:", error);
+      
+      // If the specific endpoint fails, try getting all courses and filtering
+      if (error.response?.status === 404) {
+        console.log('🔄 404 detected, trying alternative approach...');
+        return await courseService.getAllCoursesByInstituteId(instituteId);
+      }
+      
+      return [];
+    }
+  },
+
+  // Alternative method: Get all courses and filter by institute
+  getAllCoursesByInstituteId: async (instituteId) => {
+    try {
+      const response = await api.get('/courses');
+      const data = response.data;
+      
+      console.log('🔍 All Courses API Response:', data);
+      
+      let coursesArray = [];
+      if (Array.isArray(data)) {
+        coursesArray = data;
+      } else if (data && Array.isArray(data.courses)) {
+        coursesArray = data.courses;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        coursesArray = data.data;
+      }
+      
+      // Filter courses by institute ID
+      const instituteCourses = coursesArray.filter(course => 
+        course.institute && 
+        (course.institute._id === instituteId || course.institute === instituteId)
+      );
+      
+      console.log(`🔍 Filtered courses for institute ${instituteId}:`, instituteCourses);
+      return instituteCourses;
+      
+    } catch (error) {
+      console.error("❌ Error in courseService.getAllCoursesByInstituteId:", error);
+      return [];
+    }
+  },
+
+  // Create a new course
   createCourse: async (courseData) => {
     try {
-      console.log('📤 Creating course with data:', courseData);
-
-      // Use FormData only if there's an image
-      if (courseData.image instanceof File) {
-        const formData = new FormData();
-        
-        // Append all fields to FormData
-        Object.keys(courseData).forEach(key => {
-          if (courseData[key] !== null && courseData[key] !== undefined) {
-            if (key === 'facilities' || key === 'syllabus') {
-              formData.append(key, JSON.stringify(courseData[key]));
-            } else if (key === 'image') {
-              formData.append(key, courseData[key]);
-            } else {
-              formData.append(key, courseData[key]);
-            }
-          }
-        });
-
-        const response = await api.post('/courses', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data;
-      } else {
-        // No image - send as JSON
-        const response = await api.post('/courses', courseData);
-        return response.data;
-      }
-    } catch (error) {
-      console.error("❌ Error creating course:", error);
+      console.log('🔍 Course Data being sent:', courseData);
       
-      // Enhanced error logging
-      if (error.response) {
-        console.error('🔴 Backend Error:', {
-          status: error.response.status,
-          data: error.response.data,
-          message: error.response.data?.message
+      const formData = new FormData();
+      
+      // Enhanced FormData handling
+      for (const key in courseData) {
+        if (courseData[key] !== null && courseData[key] !== undefined) {
+          if (key === 'facilities' || key === 'syllabus') {
+            const arrayData = Array.isArray(courseData[key]) ? courseData[key] : [];
+            formData.append(key, JSON.stringify(arrayData));
+            console.log(`📦 ${key}:`, arrayData);
+          } else if (key === 'image' && courseData[key] instanceof File) {
+            formData.append(key, courseData[key]);
+            console.log(`🖼️ ${key}:`, courseData[key].name, courseData[key].size);
+          } else {
+            formData.append(key, String(courseData[key]));
+            console.log(`📝 ${key}:`, courseData[key]);
+          }
+        }
+      }
+      
+      // Log FormData contents for debugging
+      console.log('📤 FormData entries:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ', pair[1]);
+      }
+      
+      const response = await api.post('/courses', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      
+      const data = response.data;
+      console.log('✅ Create Course API Response:', data);
+      return data;
+      
+    } catch (error) {
+      console.error("❌ Error in courseService.createCourse:", error);
+      
+      // Enhanced error logging for 500 errors
+      if (error.response?.status === 500) {
+        console.error('🔴 Backend 500 Error Details:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data,
+          backendError: error.response?.data
         });
       }
       
@@ -69,55 +152,34 @@ const courseService = {
     }
   },
 
-  // Alternative: Create course with JSON only (no image)
-  createCourseJson: async (courseData) => {
-    try {
-      console.log('📤 Creating course with JSON:', courseData);
-      
-      const response = await api.post('/courses', courseData);
-      return response.data;
-    } catch (error) {
-      console.error("❌ Error creating course with JSON:", error);
-      
-      if (error.response) {
-        console.error('🔴 Backend Error Details:', error.response.data);
-        throw new Error(error.response.data?.message || 'Failed to create course');
-      }
-      
-      throw error;
-    }
-  },
-
   // Update an existing course
   updateCourse: async (courseId, courseData) => {
     try {
-      // Use FormData only if there's an image
-      if (courseData.image instanceof File) {
-        const formData = new FormData();
-        
-        Object.keys(courseData).forEach(key => {
-          if (courseData[key] !== null && courseData[key] !== undefined) {
-            if (key === 'facilities' || key === 'syllabus') {
-              formData.append(key, JSON.stringify(courseData[key]));
-            } else if (key === 'image') {
-              formData.append(key, courseData[key]);
-            } else {
-              formData.append(key, courseData[key]);
-            }
+      const formData = new FormData();
+      
+      for (const key in courseData) {
+        if (courseData[key] !== null && courseData[key] !== undefined) {
+          if (key === 'facilities' || key === 'syllabus') {
+            const arrayData = Array.isArray(courseData[key]) ? courseData[key] : [];
+            formData.append(key, JSON.stringify(arrayData));
+          } else if (key === 'image' && courseData[key] instanceof File) {
+            formData.append(key, courseData[key]);
+          } else {
+            formData.append(key, String(courseData[key]));
           }
-        });
-
-        const response = await api.put(`/courses/${courseId}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data;
-      } else {
-        // No image - send as JSON
-        const response = await api.put(`/courses/${courseId}`, courseData);
-        return response.data;
+        }
       }
+
+      const response = await api.put(`/courses/${courseId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      
+      const data = response.data;
+      console.log('🔍 Update Course API Response:', data);
+      return data;
+      
     } catch (error) {
-      console.error("Error updating course:", error);
+      console.error("❌ Error in courseService.updateCourse:", error);
       return null;
     }
   },
@@ -126,56 +188,51 @@ const courseService = {
   deleteCourse: async (courseId) => {
     try {
       const response = await api.delete(`/courses/${courseId}`);
-      return response.data;
+      const data = response.data;
+      console.log('🔍 Delete Course API Response:', data);
+      return data;
     } catch (error) {
-      console.error("Error deleting course:", error);
+      console.error("❌ Error in courseService.deleteCourse:", error);
       return null;
     }
   },
 
-  // Get courses by institute ID
-  getInstituteCourses: async (instituteId) => {
+  // Test all course endpoints
+  testEndpoints: async () => {
     try {
-      // Try different endpoint patterns
-      const endpoints = [
-        `/courses?institute=${instituteId}`,
-        `/courses/institute/${instituteId}`,
-        '/courses' // Fallback - get all and filter
-      ];
-
-      for (const endpoint of endpoints) {
-        try {
-          const response = await api.get(endpoint);
-          const data = response.data;
-          
-          let courses = [];
-          if (Array.isArray(data)) {
-            courses = data;
-          } else if (data && Array.isArray(data.courses)) {
-            courses = data.courses;
-          } else if (data && data.data && Array.isArray(data.data)) {
-            courses = data.data;
-          }
-
-          // If this is the fallback endpoint, filter by institute
-          if (endpoint === '/courses' && courses.length > 0) {
-            courses = courses.filter(course => 
-              course.institute && course.institute._id === instituteId
-            );
-          }
-
-          if (courses.length > 0) {
-            return courses;
-          }
-        } catch (error) {
-          console.log(`Endpoint ${endpoint} failed, trying next...`);
-        }
+      console.log('🧪 TESTING COURSE ENDPOINTS...');
+      
+      // Test 1: Check if /courses/my works
+      console.log('🧪 Testing /courses/my...');
+      try {
+        const myCourses = await api.get('/courses/my');
+        console.log('✅ /courses/my - SUCCESS:', myCourses.data);
+      } catch (error) {
+        console.log('❌ /courses/my - FAILED:', error.response?.status, error.message);
       }
       
-      return [];
+      // Test 2: Check if /courses/institute/{id} works
+      console.log('🧪 Testing /courses/institute/{id}...');
+      try {
+        const instituteCourses = await api.get('/courses/institute/test-id');
+        console.log('✅ /courses/institute/{id} - SUCCESS:', instituteCourses.data);
+      } catch (error) {
+        console.log('❌ /courses/institute/{id} - FAILED:', error.response?.status, error.message);
+      }
+      
+      // Test 3: Check if /courses works
+      console.log('🧪 Testing /courses...');
+      try {
+        const allCourses = await api.get('/courses');
+        console.log('✅ /courses - SUCCESS:', allCourses.data);
+      } catch (error) {
+        console.log('❌ /courses - FAILED:', error.response?.status, error.message);
+      }
+      
+      return { success: true };
     } catch (error) {
-      console.error("Error fetching institute courses:", error);
-      return [];
+      console.error('🧪 TEST - Error:', error);
+      return { success: false, error: error.message };
     }
   }
 };
