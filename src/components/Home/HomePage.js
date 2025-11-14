@@ -15,56 +15,61 @@ const HomePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-// Test the corrected endpoints
-useEffect(() => {
-  const testEndpoints = async () => {
-    // Test institutes endpoint
-    const institutes = await instituteService.getAllInstitutes();
-    console.log('✅ Institutes:', institutes.institutes); // Now properly extracted
-    
-    // Test single institute
-    if (institutes.institutes.length > 0) {
-      const singleInstitute = await instituteService.getInstituteById(institutes.institutes[0]._id);
-      console.log('✅ Single Institute:', singleInstitute);
+  // -------------------------------------------------------
+  // 🟢 FIX 1: CALL THE FETCH FUNCTION ON PAGE LOAD
+  // -------------------------------------------------------
+  useEffect(() => {
+    fetchFeaturedInstitutes();
+    fetchStats();
+  }, []);
+
+  // -------------------------------------------------------
+  // Fetch Featured Institutes
+  // -------------------------------------------------------
+  const fetchFeaturedInstitutes = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+
+    try {
+      const response = await instituteService.getAllInstitutes();
+      console.log("🔍 Featured API Raw Response:", response);
+
+      // Extract the array safely
+      const institutesArray = Array.isArray(response?.institutes)
+        ? response.institutes
+        : [];
+
+      console.log("🔍 Extracted Institutes Array:", institutesArray);
+
+      if (!Array.isArray(institutesArray)) {
+        setFetchError("Invalid data format from server");
+        setFeaturedInstitutes([]);
+        return;
+      }
+
+      // Slice first 6 institutes safely
+      const featured = institutesArray.slice(0, 6);
+      setFeaturedInstitutes(featured);
+
+    } catch (error) {
+      console.error("❌ Error fetching featured institutes:", error);
+      setFetchError(error.message || "Failed to fetch institutes");
+      setFeaturedInstitutes([]);
+    } finally {
+      setIsLoading(false);
     }
   };
-  testEndpoints();
-}, []);
 
-// In HomePage.js - VERIFY this is correct
-const fetchFeaturedInstitutes = async () => {
-  setIsLoading(true);
-  setFetchError(null);
-  try {
-    const response = await instituteService.getAllInstitutes();
-    console.log('🔍 API Response:', response);
-    
-    // FIX: Extract institutes array from response object
-    const institutesArray = response.institutes || [];
-    console.log('🔍 Institutes Array:', institutesArray);
-    console.log('🔍 Is Array?', Array.isArray(institutesArray));
-    
-    if (Array.isArray(institutesArray)) {
-      const featured = institutesArray.slice(0, 6);
-      console.log('🔍 Featured Institutes:', featured);
-      setFeaturedInstitutes(featured);
-    } else {
-      console.warn('❌ Expected array but got:', typeof institutesArray, institutesArray);
-      setFeaturedInstitutes([]);
-      setFetchError('Invalid data format received from server');
-    }
-  } catch (error) {
-    console.error('❌ Error fetching featured institutes:', error);
-    setFetchError(error.message || 'Failed to fetch institutes');
-    setFeaturedInstitutes([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  // -------------------------------------------------------
+  // Static Stats (You can connect backend later)
+  // -------------------------------------------------------
   const fetchStats = async () => {
     setStats({ institutes: 125, reviews: 2400, students: 15000 });
   };
 
+  // -------------------------------------------------------
+  // Search Handler
+  // -------------------------------------------------------
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
@@ -72,20 +77,27 @@ const fetchFeaturedInstitutes = async () => {
     }
   };
 
+  // -------------------------------------------------------
+  // Rating Calculator
+  // -------------------------------------------------------
   const getAverageRating = (institute) => {
-    if (!institute.reviews || !Array.isArray(institute.reviews) || institute.reviews.length === 0) return 0;
-    const sum = institute.reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
+    if (!Array.isArray(institute?.reviews) || institute.reviews.length === 0) return 0;
+    const sum = institute.reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
     return (sum / institute.reviews.length).toFixed(1);
   };
 
+  // -------------------------------------------------------
+  // UI START
+  // -------------------------------------------------------
   return (
     <div className="homepage">
+
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
           <h1>Find Your Perfect Educational Institute</h1>
           <p>Discover the best schools, colleges, and coaching centers with authentic reviews and ratings</p>
-          
+
           <form onSubmit={handleSearch} className="search-box">
             <input
               type="text"
@@ -102,6 +114,7 @@ const fetchFeaturedInstitutes = async () => {
             <div className="stat"><strong>{stats.students}+</strong><span>Students</span></div>
           </div>
         </div>
+
         <div className="hero-image">
           <div className="floating-card card-1"><span>🏫</span><p>Top Schools</p></div>
           <div className="floating-card card-2"><span>🎓</span><p>Best Colleges</p></div>
@@ -114,34 +127,33 @@ const fetchFeaturedInstitutes = async () => {
         <div className="container">
           <h2>Why Choose EduList?</h2>
           <div className="features-grid">
-            <div className="feature-card"><div className="feature-icon">🔍</div><h3>Easy Search</h3><p>Find institutes by location, category, fees, and facilities with advanced filters</p></div>
-            <div className="feature-card"><div className="feature-icon">⭐</div><h3>Authentic Reviews</h3><p>Read genuine reviews from students and parents to make informed decisions</p></div>
-            <div className="feature-card"><div className="feature-icon">📊</div><h3>Detailed Profiles</h3><p>Comprehensive information about courses, facilities, fees, and admission process</p></div>
-            <div className="feature-card"><div className="feature-icon">💬</div><h3>Direct Enquiry</h3><p>Contact institutes directly for more information or admission queries</p></div>
+            <div className="feature-card"><div className="feature-icon">🔍</div><h3>Easy Search</h3><p>Find institutes by location, category, fees, and facilities</p></div>
+            <div className="feature-card"><div className="feature-icon">⭐</div><h3>Authentic Reviews</h3><p>Real reviews from students and parents</p></div>
+            <div className="feature-card"><div className="feature-icon">📊</div><h3>Detailed Profiles</h3><p>Courses, facilities, fees, and more</p></div>
+            <div className="feature-card"><div className="feature-icon">💬</div><h3>Direct Enquiry</h3><p>Contact institutes directly</p></div>
           </div>
         </div>
       </section>
 
-      {/* Featured Institutes Section */}
+      {/* Featured Institutes */}
       <section className="featured-section">
         <div className="container">
           <div className="section-header">
             <h2>Featured Institutes</h2>
             <Link to="/institutes" className="view-all">View All →</Link>
           </div>
-          
+
           <div className="institutes-grid">
             {isLoading ? (
               <div className="loading-state"><p>Loading featured institutes...</p></div>
             ) : fetchError ? (
               <div className="error-state">
-                <p>Failed to load institutes.</p>
+                <p>Error loading institutes.</p>
                 <p>{fetchError}</p>
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              // FINAL SAFETY CHECK: featuredInstitutes should always be an array now
-              Array.isArray(featuredInstitutes) && featuredInstitutes.map(institute => (
+              featuredInstitutes.map((institute) => (
                 <div key={institute._id} className="institute-card">
                   <div className="card-image">
                     <div className="image-placeholder">
@@ -151,38 +163,33 @@ const fetchFeaturedInstitutes = async () => {
                       <span className="rating">⭐ {getAverageRating(institute)}</span>
                     </div>
                   </div>
+
                   <div className="card-content">
                     <h3>{institute.name || 'Unnamed Institute'}</h3>
                     <p className="category">{institute.category} • {institute.affiliation}</p>
-                    <p className="location">
-                      📍 {institute.address?.city}, {institute.address?.state}
-                    </p>
-                    <p className="description">
-                      {institute.description?.substring(0, 80)}...
-                    </p>
+                    <p className="location">📍 {institute.address?.city}, {institute.address?.state}</p>
+                    <p className="description">{(institute.description || '').substring(0, 80)}...</p>
                   </div>
+
                   <div className="card-actions">
-                    <Link to={`/institute/${institute._id}`} className="btn btn-primary">
-                      View Details
-                    </Link>
+                    <Link to={`/institute/${institute._id}`} className="btn btn-primary">View Details</Link>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="empty-state">
-                <p>No featured institutes available at the moment.</p>
-              </div>
+              <div className="empty-state"><p>No featured institutes found.</p></div>
             )}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA */}
       <section className="cta-section">
         <div className="container">
           <div className="cta-content">
             <h2>Are You an Educational Institute?</h2>
-            <p>Join EduList to reach thousands of students and parents looking for quality education</p>
+            <p>Join EduList and reach thousands of students</p>
+
             {user ? (
               user.role === 'institute' ? (
                 <Link to="/institute/dashboard" className="btn btn-light">Go to Dashboard</Link>
@@ -196,7 +203,7 @@ const fetchFeaturedInstitutes = async () => {
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Categories */}
       <section className="categories-section">
         <div className="container">
           <h2>Browse by Category</h2>
@@ -206,21 +213,25 @@ const fetchFeaturedInstitutes = async () => {
               <h3>Schools</h3>
               <p>CBSE, ICSE, State Boards</p>
             </Link>
+
             <Link to="/institutes?category=college" className="category-card">
               <span className="category-icon">🎓</span>
               <h3>Colleges</h3>
               <p>Engineering, Medical, Arts</p>
             </Link>
+
             <Link to="/institutes?category=university" className="category-card">
               <span className="category-icon">🏛️</span>
               <h3>Universities</h3>
-              <p>Public and Private</p>
+              <p>Public & Private</p>
             </Link>
+
             <Link to="/institutes?category=coaching" className="category-card">
               <span className="category-icon">📚</span>
               <h3>Coaching</h3>
               <p>IIT-JEE, NEET, UPSC</p>
             </Link>
+
             <Link to="/institutes?category=preschool" className="category-card">
               <span className="category-icon">👶</span>
               <h3>Preschools</h3>
@@ -229,6 +240,7 @@ const fetchFeaturedInstitutes = async () => {
           </div>
         </div>
       </section>
+
     </div>
   );
 };
