@@ -15,10 +15,21 @@ const HomePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchFeaturedInstitutes();
-    fetchStats();
-  }, []);
+// Test the corrected endpoints
+useEffect(() => {
+  const testEndpoints = async () => {
+    // Test institutes endpoint
+    const institutes = await instituteService.getAllInstitutes();
+    console.log('✅ Institutes:', institutes.institutes); // Now properly extracted
+    
+    // Test single institute
+    if (institutes.institutes.length > 0) {
+      const singleInstitute = await instituteService.getInstituteById(institutes.institutes[0]._id);
+      console.log('✅ Single Institute:', singleInstitute);
+    }
+  };
+  testEndpoints();
+}, []);
 
 // In HomePage.js - VERIFY this is correct
 const fetchFeaturedInstitutes = async () => {
