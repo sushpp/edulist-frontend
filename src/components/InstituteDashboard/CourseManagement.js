@@ -27,11 +27,7 @@ const CourseManagement = () => {
   const fetchCourses = async () => {
     try {
       const data = await courseService.getCoursesByInstitute();
-      // FIX: Enhanced array safety with multiple fallbacks
-      const coursesData = Array.isArray(data) ? data : 
-                         data?.courses ? data.courses : 
-                         data?.data ? data.data : [];
-      setCourses(coursesData);
+      setCourses(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching courses:', error);
       setCourses([]); 
@@ -43,12 +39,9 @@ const CourseManagement = () => {
     setLoading(true);
     
     try {
-      // FIX: Enhanced debugging for 500 errors
-      console.log('🔍 Course Form Data:', formData);
-      
-      // FIX: Validate required fields
+      // Validate required fields
       const requiredFields = ['title', 'description', 'duration', 'fees', 'category'];
-      const missingFields = requiredFields.filter(field => !formData[field]);
+      const missingFields = requiredFields.filter(field => !formData[field]?.toString().trim());
       
       if (missingFields.length > 0) {
         alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
@@ -56,10 +49,17 @@ const CourseManagement = () => {
         return;
       }
 
-      // FIX: Ensure fees is a number
+      // Prepare course data
       const courseData = {
-        ...formData,
-        fees: Number(formData.fees) || 0
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        duration: formData.duration.trim(),
+        fees: Number(formData.fees) || 0,
+        category: formData.category,
+        eligibility: formData.eligibility?.trim() || '',
+        facilities: Array.isArray(formData.facilities) ? formData.facilities.filter(f => f.trim()) : [],
+        syllabus: Array.isArray(formData.syllabus) ? formData.syllabus.filter(s => s.trim()) : [],
+        image: formData.image // File object for upload
       };
 
       console.log('📤 Sending course data:', courseData);
@@ -71,41 +71,38 @@ const CourseManagement = () => {
         result = await courseService.createCourse(courseData);
       }
 
-      console.log('✅ Course save result:', result);
-
       if (result) {
+        // Success
         setShowForm(false);
         setEditingCourse(null);
-        setFormData({
-          title: '',
-          description: '',
-          duration: '',
-          fees: '',
-          category: '',
-          facilities: [],
-          eligibility: '',
-          syllabus: [],
-          image: null
-        });
-        setImagePreview(null);
+        resetForm();
         fetchCourses();
         alert(editingCourse ? 'Course updated successfully!' : 'Course created successfully!');
       } else {
-        alert('Failed to save course. Please check the console for details.');
+        alert('Failed to save course. Please try again.');
       }
       
     } catch (error) {
       console.error('❌ Error saving course:', error);
-      
-      // FIX: Enhanced error messaging for 500 errors
-      if (error.response?.status === 500) {
-        alert('Server error (500). Please check if all required fields are filled correctly and try again.');
-      } else {
-        alert('Error saving course. Please try again.');
-      }
+      alert('Error saving course. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      duration: '',
+      fees: '',
+      category: '',
+      facilities: [],
+      eligibility: '',
+      syllabus: [],
+      image: null
+    });
+    setImagePreview(null);
   };
 
   const handleEdit = (course) => {
@@ -132,8 +129,6 @@ const CourseManagement = () => {
         if (result) {
           fetchCourses();
           alert('Course deleted successfully!');
-        } else {
-          alert('Failed to delete course.');
         }
       } catch (error) {
         console.error('Error deleting course:', error);
@@ -145,7 +140,6 @@ const CourseManagement = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // FIX: Validate file size and type
       if (file.size > 5 * 1024 * 1024) {
         alert('Image size must be less than 5MB');
         return;
@@ -190,20 +184,23 @@ const CourseManagement = () => {
     }));
   };
 
-  // FIX: Test function to debug course creation
-  const testCourseCreation = async () => {
-    console.log('🧪 Testing course creation with minimal data...');
+  // Test with JSON instead of FormData
+  const testJsonCourseCreation = async () => {
+    console.log('🧪 Testing course creation with JSON data...');
     
     const testData = {
-      title: 'Test Course',
-      description: 'This is a test course',
+      title: 'Test Course ' + Date.now(),
+      description: 'This is a test course description',
       duration: '6 months',
       fees: 10000,
-      category: 'coaching'
+      category: 'coaching',
+      eligibility: '12th grade',
+      facilities: ['Library', 'Lab'],
+      syllabus: ['Module 1', 'Module 2']
     };
     
     try {
-      const result = await courseService.createCourse(testData);
+      const result = await courseService.createCourseJson(testData);
       console.log('🧪 Test result:', result);
       if (result) {
         alert('Test course created successfully!');
@@ -211,6 +208,7 @@ const CourseManagement = () => {
       }
     } catch (error) {
       console.error('🧪 Test failed:', error);
+      alert('Test failed: ' + error.message);
     }
   };
 
@@ -225,13 +223,12 @@ const CourseManagement = () => {
           >
             + Add New Course
           </button>
-          {/* FIX: Temporary debug button */}
           <button 
-            onClick={testCourseCreation}
+            onClick={testJsonCourseCreation}
             className="btn btn-outline"
             style={{ marginLeft: '10px' }}
           >
-            🧪 Test Create
+            🧪 Test JSON
           </button>
         </div>
       </div>
@@ -246,18 +243,7 @@ const CourseManagement = () => {
                 onClick={() => {
                   setShowForm(false);
                   setEditingCourse(null);
-                  setFormData({
-                    title: '',
-                    description: '',
-                    duration: '',
-                    fees: '',
-                    category: '',
-                    facilities: [],
-                    eligibility: '',
-                    syllabus: [],
-                    image: null
-                  });
-                  setImagePreview(null);
+                  resetForm();
                 }}
                 className="close-button"
                 type="button"
@@ -389,7 +375,7 @@ const CourseManagement = () => {
                   onClick={() => {
                     setShowForm(false);
                     setEditingCourse(null);
-                    setImagePreview(null);
+                    resetForm();
                   }}
                   className="btn btn-outline"
                 >
@@ -423,9 +409,9 @@ const CourseManagement = () => {
         ) : (
           <div className="courses-grid">
             {Array.isArray(courses) && courses.map(course => (
-              <div key={course._id || course.id} className="course-card">
+              <div key={course._id} className="course-card">
                 <div className="course-header">
-                  <h3>{course.title || 'Untitled Course'}</h3>
+                  <h3>{course.title}</h3>
                   <div className="course-actions">
                     <button 
                       onClick={() => handleEdit(course)}
@@ -444,7 +430,7 @@ const CourseManagement = () => {
                 
                 {course.imageUrl && (
                   <div className="course-image">
-                    <img src={course.imageUrl.replace('http://', 'https://')} alt={course.title} />
+                    <img src={course.imageUrl} alt={course.title} />
                   </div>
                 )}
                 
@@ -463,7 +449,7 @@ const CourseManagement = () => {
                   <div className="course-facilities">
                     <strong>Facilities:</strong>
                     <div className="facilities-tags">
-                      {Array.isArray(course.facilities) && course.facilities.map((facility, index) => (
+                      {course.facilities.map((facility, index) => (
                         <span key={index} className="facility-tag">
                           {facility}
                         </span>
