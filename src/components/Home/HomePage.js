@@ -20,36 +20,36 @@ const HomePage = () => {
     fetchStats();
   }, []);
 
-  const fetchFeaturedInstitutes = async () => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-      const response = await instituteService.getAllInstitutes();
-      console.log('🔍 API Response:', response);
-      
-      // FIX: Service now returns { institutes: array } - extract properly
-      const institutesArray = response.institutes || [];
-      console.log('🔍 Institutes Array:', institutesArray);
-      console.log('🔍 Is Array?', Array.isArray(institutesArray));
-      
-      if (Array.isArray(institutesArray)) {
-        const featured = institutesArray.slice(0, 6);
-        console.log('🔍 Featured Institutes:', featured);
-        setFeaturedInstitutes(featured);
-      } else {
-        console.warn('❌ Expected array but got:', typeof institutesArray, institutesArray);
-        setFeaturedInstitutes([]);
-        setFetchError('Invalid data format received from server');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching featured institutes:', error);
-      setFetchError(error.message || 'Failed to fetch institutes');
+// In HomePage.js - fix the fetchFeaturedInstitutes function
+const fetchFeaturedInstitutes = async () => {
+  setIsLoading(true);
+  setFetchError(null);
+  try {
+    const response = await instituteService.getAllInstitutes();
+    console.log('🔍 API Response:', response);
+    
+    // FIX: The service returns { institutes: array } - extract the array properly
+    const institutesArray = response.institutes || [];
+    console.log('🔍 Institutes Array:', institutesArray);
+    console.log('🔍 Is Array?', Array.isArray(institutesArray));
+    
+    if (Array.isArray(institutesArray)) {
+      const featured = institutesArray.slice(0, 6);
+      console.log('🔍 Featured Institutes:', featured);
+      setFeaturedInstitutes(featured);
+    } else {
+      console.warn('❌ Expected array but got:', typeof institutesArray, institutesArray);
       setFeaturedInstitutes([]);
-    } finally {
-      setIsLoading(false);
+      setFetchError('Invalid data format received from server');
     }
-  };
-
+  } catch (error) {
+    console.error('❌ Error fetching featured institutes:', error);
+    setFetchError(error.message || 'Failed to fetch institutes');
+    setFeaturedInstitutes([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
   const fetchStats = async () => {
     setStats({ institutes: 125, reviews: 2400, students: 15000 });
   };
