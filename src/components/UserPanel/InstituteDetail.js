@@ -33,6 +33,7 @@ const InstituteDetail = () => {
 
 // In InstituteDetail.js - fix the course fetching
 // In InstituteDetail.js - update the fetchInstituteDetail function
+// This part is already correct in your InstituteDetail.js
 const fetchInstituteDetail = async () => {
   try {
     setError('');

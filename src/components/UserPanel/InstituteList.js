@@ -17,31 +17,32 @@ const InstituteList = () => {
     // eslint-disable-next-line
   }, [filters]);
 
-  const fetchInstitutes = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await instituteService.getAllInstitutes(filters);
-      
-      // FIX: The service returns { institutes: array } - extract properly
-      const institutesArray = response.institutes || [];
-      
-      // Additional safety check - ensure it's actually an array
-      if (Array.isArray(institutesArray)) {
-        setInstitutes(institutesArray);
-      } else {
-        console.warn('Expected array but got:', typeof institutesArray, institutesArray);
-        setInstitutes([]);
-        setError('Invalid data format received from server');
-      }
-    } catch (err) {
-      console.error('Error fetching institutes:', err);
-      setError(err.message || 'Failed to fetch institutes');
+// This part is already correct in your InstituteList.js
+const fetchInstitutes = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const response = await instituteService.getAllInstitutes(filters);
+    
+    // FIX: The service returns { institutes: array } - extract properly
+    const institutesArray = response.institutes || [];
+    
+    // Additional safety check - ensure it's actually an array
+    if (Array.isArray(institutesArray)) {
+      setInstitutes(institutesArray);
+    } else {
+      console.warn('Expected array but got:', typeof institutesArray, institutesArray);
       setInstitutes([]);
-    } finally {
-      setLoading(false);
+      setError('Invalid data format received from server');
     }
-  };
+  } catch (err) {
+    console.error('Error fetching institutes:', err);
+    setError(err.message || 'Failed to fetch institutes');
+    setInstitutes([]);
+  } finally {
+    setLoading(false);
+  }
+};
   
   const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
   
