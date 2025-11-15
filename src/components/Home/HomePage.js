@@ -1,4 +1,3 @@
-// src/pages/HomePage.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { instituteService } from '../../services/institute';
@@ -16,38 +15,38 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   // -------------------------------------------------------
-  // 🟢 FIX 1: CALL THE FETCH FUNCTION ON PAGE LOAD
-  // -------------------------------------------------------
   useEffect(() => {
     fetchFeaturedInstitutes();
     fetchStats();
   }, []);
 
   // -------------------------------------------------------
-  // Fetch Featured Institutes
-  // -------------------------------------------------------
+  const normalizeInstituteResponse = (response) => {
+    if (!response) return [];
+
+    // cases:
+    // { institutes: [...] }
+    if (Array.isArray(response.institutes)) return response.institutes;
+
+    // direct array
+    if (Array.isArray(response)) return response;
+
+    // { data: { institutes: [...] } }
+    if (Array.isArray(response?.data?.institutes)) return response.data.institutes;
+
+    return [];
+  };
+
   const fetchFeaturedInstitutes = async () => {
     setIsLoading(true);
     setFetchError(null);
 
     try {
       const response = await instituteService.getAllInstitutes();
-      console.log("🔍 Featured API Raw Response:", response);
+      console.log("🔍 Raw API Response:", response);
 
-      // Extract the array safely
-      const institutesArray = Array.isArray(response?.institutes)
-        ? response.institutes
-        : [];
+      const institutesArray = normalizeInstituteResponse(response);
 
-      console.log("🔍 Extracted Institutes Array:", institutesArray);
-
-      if (!Array.isArray(institutesArray)) {
-        setFetchError("Invalid data format from server");
-        setFeaturedInstitutes([]);
-        return;
-      }
-
-      // Slice first 6 institutes safely
       const featured = institutesArray.slice(0, 6);
       setFeaturedInstitutes(featured);
 
@@ -61,14 +60,14 @@ const HomePage = () => {
   };
 
   // -------------------------------------------------------
-  // Static Stats (You can connect backend later)
-  // -------------------------------------------------------
   const fetchStats = async () => {
-    setStats({ institutes: 125, reviews: 2400, students: 15000 });
+    setStats({
+      institutes: 125,
+      reviews: 2400,
+      students: 15000
+    });
   };
 
-  // -------------------------------------------------------
-  // Search Handler
   // -------------------------------------------------------
   const handleSearch = (e) => {
     e.preventDefault();
@@ -77,17 +76,12 @@ const HomePage = () => {
     }
   };
 
-  // -------------------------------------------------------
-  // Rating Calculator
-  // -------------------------------------------------------
   const getAverageRating = (institute) => {
     if (!Array.isArray(institute?.reviews) || institute.reviews.length === 0) return 0;
     const sum = institute.reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
     return (sum / institute.reviews.length).toFixed(1);
   };
 
-  // -------------------------------------------------------
-  // UI START
   // -------------------------------------------------------
   return (
     <div className="homepage">
@@ -96,7 +90,7 @@ const HomePage = () => {
       <section className="hero-section">
         <div className="hero-content">
           <h1>Find Your Perfect Educational Institute</h1>
-          <p>Discover the best schools, colleges, and coaching centers with authentic reviews and ratings</p>
+          <p>Discover the best schools, colleges, and coaching centers with authentic reviews</p>
 
           <form onSubmit={handleSearch} className="search-box">
             <input
@@ -109,28 +103,9 @@ const HomePage = () => {
           </form>
 
           <div className="hero-stats">
-            <div className="stat"><strong>{stats.institutes}+</strong><span>Institutes</span></div>
-            <div className="stat"><strong>{stats.reviews}+</strong><span>Reviews</span></div>
-            <div className="stat"><strong>{stats.students}+</strong><span>Students</span></div>
-          </div>
-        </div>
-
-        <div className="hero-image">
-          <div className="floating-card card-1"><span>🏫</span><p>Top Schools</p></div>
-          <div className="floating-card card-2"><span>🎓</span><p>Best Colleges</p></div>
-          <div className="floating-card card-3"><span>⭐</span><p>Rated 4.8/5</p></div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="features-section">
-        <div className="container">
-          <h2>Why Choose EduList?</h2>
-          <div className="features-grid">
-            <div className="feature-card"><div className="feature-icon">🔍</div><h3>Easy Search</h3><p>Find institutes by location, category, fees, and facilities</p></div>
-            <div className="feature-card"><div className="feature-icon">⭐</div><h3>Authentic Reviews</h3><p>Real reviews from students and parents</p></div>
-            <div className="feature-card"><div className="feature-icon">📊</div><h3>Detailed Profiles</h3><p>Courses, facilities, fees, and more</p></div>
-            <div className="feature-card"><div className="feature-icon">💬</div><h3>Direct Enquiry</h3><p>Contact institutes directly</p></div>
+            <div className="stat"><strong>{stats.institutes}</strong><span>Institutes</span></div>
+            <div className="stat"><strong>{stats.reviews}</strong><span>Reviews</span></div>
+            <div className="stat"><strong>{stats.students}</strong><span>Students</span></div>
           </div>
         </div>
       </section>
@@ -145,7 +120,7 @@ const HomePage = () => {
 
           <div className="institutes-grid">
             {isLoading ? (
-              <div className="loading-state"><p>Loading featured institutes...</p></div>
+              <div className="loading-state">Loading featured institutes...</div>
             ) : fetchError ? (
               <div className="error-state">
                 <p>Error loading institutes.</p>
@@ -153,94 +128,29 @@ const HomePage = () => {
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              featuredInstitutes.map((institute) => (
-                <div key={institute._id} className="institute-card">
+              featuredInstitutes.map((inst) => (
+                <div key={inst._id} className="institute-card">
                   <div className="card-image">
-                    <div className="image-placeholder">
-                      {institute.name?.charAt(0).toUpperCase() || 'I'}
-                    </div>
-                    <div className="card-badge">
-                      <span className="rating">⭐ {getAverageRating(institute)}</span>
-                    </div>
+                    <div className="image-placeholder">{inst.name?.charAt(0).toUpperCase() || 'I'}</div>
+                    <div className="card-badge">⭐ {getAverageRating(inst)}</div>
                   </div>
-
                   <div className="card-content">
-                    <h3>{institute.name || 'Unnamed Institute'}</h3>
-                    <p className="category">{institute.category} • {institute.affiliation}</p>
-                    <p className="location">📍 {institute.address?.city}, {institute.address?.state}</p>
-                    <p className="description">{(institute.description || '').substring(0, 80)}...</p>
+                    <h3>{inst.name || 'Unnamed Institute'}</h3>
+                    <p>{inst.category} • {inst.affiliation}</p>
+                    <p>📍 {inst.address?.city}, {inst.address?.state}</p>
+                    <p>{(inst.description || '').substring(0, 80)}...</p>
                   </div>
-
                   <div className="card-actions">
-                    <Link to={`/institute/${institute._id}`} className="btn btn-primary">View Details</Link>
+                    <Link to={`/institute/${inst._id}`} className="btn btn-primary">View Details</Link>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="empty-state"><p>No featured institutes found.</p></div>
+              <div className="empty-state">No featured institutes found.</div>
             )}
           </div>
         </div>
       </section>
-
-      {/* CTA */}
-      <section className="cta-section">
-        <div className="container">
-          <div className="cta-content">
-            <h2>Are You an Educational Institute?</h2>
-            <p>Join EduList and reach thousands of students</p>
-
-            {user ? (
-              user.role === 'institute' ? (
-                <Link to="/institute/dashboard" className="btn btn-light">Go to Dashboard</Link>
-              ) : (
-                <Link to="/register?role=institute" className="btn btn-light">Register Your Institute</Link>
-              )
-            ) : (
-              <Link to="/register?role=institute" className="btn btn-light">Register Your Institute</Link>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Categories */}
-      <section className="categories-section">
-        <div className="container">
-          <h2>Browse by Category</h2>
-          <div className="categories-grid">
-            <Link to="/institutes?category=school" className="category-card">
-              <span className="category-icon">🏫</span>
-              <h3>Schools</h3>
-              <p>CBSE, ICSE, State Boards</p>
-            </Link>
-
-            <Link to="/institutes?category=college" className="category-card">
-              <span className="category-icon">🎓</span>
-              <h3>Colleges</h3>
-              <p>Engineering, Medical, Arts</p>
-            </Link>
-
-            <Link to="/institutes?category=university" className="category-card">
-              <span className="category-icon">🏛️</span>
-              <h3>Universities</h3>
-              <p>Public & Private</p>
-            </Link>
-
-            <Link to="/institutes?category=coaching" className="category-card">
-              <span className="category-icon">📚</span>
-              <h3>Coaching</h3>
-              <p>IIT-JEE, NEET, UPSC</p>
-            </Link>
-
-            <Link to="/institutes?category=preschool" className="category-card">
-              <span className="category-icon">👶</span>
-              <h3>Preschools</h3>
-              <p>Playgroups, Kindergarten</p>
-            </Link>
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 };
