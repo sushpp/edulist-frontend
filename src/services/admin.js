@@ -4,10 +4,27 @@ export const adminService = {
   getDashboardAnalytics: async () => {
     try {
       const response = await api.get('/admin/dashboard');
-      return response.data;
+      const data = response.data;
+
+      // Safely extract analytics and recentActivities
+      return {
+        analytics: data?.analytics || data?.data?.analytics || {
+          totalUsers: 0,
+          totalInstitutes: 0,
+          pendingInstitutes: 0,
+          totalReviews: 0,
+          totalEnquiries: 0,
+          totalCourses: 0
+        },
+        recentActivities: data?.recentActivities || data?.data?.recentActivities || {
+          newUsers: [],
+          pendingInstitutes: [],
+          recentReviews: []
+        },
+      };
     } catch (error) {
       console.error('Error fetching dashboard analytics:', error);
-      // Return mock data for demo purposes
+      // Return fallback data
       return {
         analytics: {
           totalUsers: 150,
@@ -29,10 +46,11 @@ export const adminService = {
   getPendingInstitutes: async () => {
     try {
       const response = await api.get('/admin/institutes/pending');
-      return response.data;
+      const data = response.data;
+
+      return Array.isArray(data?.institutes) ? data.institutes : data || [];
     } catch (error) {
       console.error('Error fetching pending institutes:', error);
-      // Return mock data for demo
       return [];
     }
   },
@@ -45,10 +63,9 @@ export const adminService = {
   getAllUsers: async () => {
     try {
       const response = await api.get('/admin/users');
-      return response.data;
+      return response.data?.users || [];
     } catch (error) {
       console.error('Error fetching users:', error);
-      // Return mock data for demo
       return [];
     }
   },
@@ -61,7 +78,7 @@ export const adminService = {
   getAllReviews: async () => {
     try {
       const response = await api.get('/admin/reviews');
-      return response.data;
+      return response.data?.reviews || [];
     } catch (error) {
       console.error('Error fetching reviews:', error);
       return [];

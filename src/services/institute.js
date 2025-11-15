@@ -7,8 +7,8 @@ export const instituteService = {
       const response = await api.get("/institutes", { params: filters });
       const data = response.data;
 
-      // Always return { institutes: [] } even if API returns different shape
-      if (data?.institutes && Array.isArray(data.institutes)) return { institutes: data.institutes };
+      // Support both {institutes: [...]} and [...list] formats
+      if (Array.isArray(data?.institutes)) return { institutes: data.institutes };
       if (Array.isArray(data)) return { institutes: data };
       return { institutes: [] };
     } catch (error) {
@@ -55,11 +55,11 @@ export const instituteService = {
     try {
       const response = await api.get("/institutes/admin/pending");
       const data = response.data;
-      if (data?.institutes && Array.isArray(data.institutes)) return { institutes: data.institutes };
-      return { institutes: [] };
+
+      return Array.isArray(data?.institutes) ? data.institutes : [];
     } catch (error) {
       console.error("❌ Error fetching pending institutes:", error);
-      return { institutes: [] };
+      return [];
     }
   },
 
