@@ -1,4 +1,5 @@
-import api from "./api";
+// src/services/institute.js
+import api from "../api/api";
 
 export const instituteService = {
   getAllInstitutes: async (filters = {}) => {
