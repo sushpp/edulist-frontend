@@ -11,8 +11,6 @@ const AdminDashboard = () => {
     totalInstitutes: 0,
     pendingInstitutes: 0,
     totalReviews: 0,
-    totalEnquiries: 0,
-    totalCourses: 0,
   });
 
   const [recentActivities, setRecentActivities] = useState({
@@ -30,51 +28,38 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const safeGet = (obj, path, fallback) => {
-    try {
-      return path.split('.').reduce((o, k) => (o ? o[k] : undefined), obj) ?? fallback;
-    } catch {
-      return fallback;
-    }
-  };
-
   const fetchDashboardData = async () => {
     try {
       const response = await adminService.getDashboardAnalytics();
-      console.log("📊 Raw Dashboard API:", response);
-
-      const safeAnalytics = safeGet(response, 'analytics', {});
-      const safeActivities = safeGet(response, 'recentActivities', {});
+      console.log('📊 Dashboard Data:', response);
 
       setAnalytics({
-        totalUsers: safeAnalytics.totalUsers ?? 0,
-        totalInstitutes: safeAnalytics.totalInstitutes ?? 0,
-        pendingInstitutes: safeAnalytics.pendingInstitutes ?? 0,
-        totalReviews: safeAnalytics.totalReviews ?? 0,
-        totalEnquiries: safeAnalytics.totalEnquiries ?? 0,
-        totalCourses: safeAnalytics.totalCourses ?? 0,
+        totalUsers: response.analytics?.totalUsers ?? 0,
+        totalInstitutes: response.analytics?.totalInstitutes ?? 0,
+        pendingInstitutes: response.analytics?.pendingInstitutes ?? 0,
+        totalReviews: response.analytics?.totalReviews ?? 0,
       });
 
       setRecentActivities({
-        newUsers: Array.isArray(safeActivities.newUsers) ? safeActivities.newUsers : [],
-        pendingInstitutes: Array.isArray(safeActivities.pendingInstitutes)
-          ? safeActivities.pendingInstitutes
+        newUsers: Array.isArray(response.recentActivities?.newUsers)
+          ? response.recentActivities.newUsers
           : [],
-        recentReviews: Array.isArray(safeActivities.recentReviews)
-          ? safeActivities.recentReviews
+        pendingInstitutes: Array.isArray(response.recentActivities?.pendingInstitutes)
+          ? response.recentActivities.pendingInstitutes
+          : [],
+        recentReviews: Array.isArray(response.recentActivities?.recentReviews)
+          ? response.recentActivities.recentReviews
           : [],
       });
 
     } catch (error) {
-      console.error("❌ Dashboard fetch error:", error);
+      console.error('❌ Dashboard fetch error:', error);
 
       setAnalytics({
         totalUsers: 0,
         totalInstitutes: 0,
         pendingInstitutes: 0,
         totalReviews: 0,
-        totalEnquiries: 0,
-        totalCourses: 0,
       });
 
       setRecentActivities({
@@ -82,7 +67,6 @@ const AdminDashboard = () => {
         pendingInstitutes: [],
         recentReviews: [],
       });
-
     } finally {
       setLoading(false);
     }
@@ -97,8 +81,8 @@ const AdminDashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <AdminSidebar 
-        isOpen={sidebarOpen} 
+      <AdminSidebar
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
       />
@@ -152,22 +136,6 @@ const AdminDashboard = () => {
                   <p>Total Reviews</p>
                 </div>
               </div>
-
-              <div className="analytics-card">
-                <div className="card-icon enquiries">📧</div>
-                <div className="card-content">
-                  <h3>{analytics.totalEnquiries}</h3>
-                  <p>Total Enquiries</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon courses">📚</div>
-                <div className="card-content">
-                  <h3>{analytics.totalCourses}</h3>
-                  <p>Total Courses</p>
-                </div>
-              </div>
             </div>
 
             {/* Recent Activities */}
@@ -218,7 +186,7 @@ const AdminDashboard = () => {
                         <div className="activity-avatar">{r.user?.name?.charAt(0) || 'U'}</div>
                         <div className="activity-details">
                           <p>
-                            <strong>{r.user?.name}</strong> reviewed 
+                            <strong>{r.user?.name}</strong> reviewed
                             <strong> {r.institute?.name}</strong>
                           </p>
                           <div>{'⭐'.repeat(r.rating || 0)}</div>
