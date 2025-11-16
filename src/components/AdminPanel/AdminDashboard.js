@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { adminService } from '../../services/admin';
 import AdminSidebar from './AdminSidebar';
 import { useAuth } from '../../context/AuthContext';
@@ -33,35 +33,35 @@ const AdminDashboard = () => {
       const response = await adminService.getDashboardAnalytics();
       console.log('📊 Dashboard Data:', response);
 
+      // Safe analytics
+      const analyticsData = response?.analytics || {};
       setAnalytics({
-        totalUsers: response.analytics?.totalUsers ?? 0,
-        totalInstitutes: response.analytics?.totalInstitutes ?? 0,
-        pendingInstitutes: response.analytics?.pendingInstitutes ?? 0,
-        totalReviews: response.analytics?.totalReviews ?? 0,
+        totalUsers: analyticsData.totalUsers ?? 0,
+        totalInstitutes: analyticsData.totalInstitutes ?? 0,
+        pendingInstitutes: analyticsData.pendingInstitutes ?? 0,
+        totalReviews: analyticsData.totalReviews ?? 0,
       });
 
+      // Safe recent activities
+      const activitiesData = response?.recentActivities || {};
       setRecentActivities({
-        newUsers: Array.isArray(response.recentActivities?.newUsers)
-          ? response.recentActivities.newUsers
+        newUsers: Array.isArray(activitiesData.newUsers) ? activitiesData.newUsers : [],
+        pendingInstitutes: Array.isArray(activitiesData.pendingInstitutes)
+          ? activitiesData.pendingInstitutes
           : [],
-        pendingInstitutes: Array.isArray(response.recentActivities?.pendingInstitutes)
-          ? response.recentActivities.pendingInstitutes
-          : [],
-        recentReviews: Array.isArray(response.recentActivities?.recentReviews)
-          ? response.recentActivities.recentReviews
+        recentReviews: Array.isArray(activitiesData.recentReviews)
+          ? activitiesData.recentReviews
           : [],
       });
-
     } catch (error) {
       console.error('❌ Dashboard fetch error:', error);
-
+      // Reset to safe defaults
       setAnalytics({
         totalUsers: 0,
         totalInstitutes: 0,
         pendingInstitutes: 0,
         totalReviews: 0,
       });
-
       setRecentActivities({
         newUsers: [],
         pendingInstitutes: [],
@@ -108,7 +108,7 @@ const AdminDashboard = () => {
               <div className="analytics-card">
                 <div className="card-icon users">👥</div>
                 <div className="card-content">
-                  <h3>{analytics.totalUsers}</h3>
+                  <h3>{analytics?.totalUsers ?? 0}</h3>
                   <p>Total Users</p>
                 </div>
               </div>
@@ -116,7 +116,7 @@ const AdminDashboard = () => {
               <div className="analytics-card">
                 <div className="card-icon institutes">🏫</div>
                 <div className="card-content">
-                  <h3>{analytics.totalInstitutes}</h3>
+                  <h3>{analytics?.totalInstitutes ?? 0}</h3>
                   <p>Approved Institutes</p>
                 </div>
               </div>
@@ -124,7 +124,7 @@ const AdminDashboard = () => {
               <div className="analytics-card">
                 <div className="card-icon pending">⏳</div>
                 <div className="card-content">
-                  <h3>{analytics.pendingInstitutes}</h3>
+                  <h3>{analytics?.pendingInstitutes ?? 0}</h3>
                   <p>Pending Institutes</p>
                 </div>
               </div>
@@ -132,7 +132,7 @@ const AdminDashboard = () => {
               <div className="analytics-card">
                 <div className="card-icon reviews">⭐</div>
                 <div className="card-content">
-                  <h3>{analytics.totalReviews}</h3>
+                  <h3>{analytics?.totalReviews ?? 0}</h3>
                   <p>Total Reviews</p>
                 </div>
               </div>
@@ -140,65 +140,45 @@ const AdminDashboard = () => {
 
             {/* Recent Activities */}
             <div className="recent-activities">
-              <div className="activity-section">
-                <h3>New Users</h3>
-                <div className="activity-list">
-                  {recentActivities.newUsers.length > 0 ? (
-                    recentActivities.newUsers.map((u) => (
-                      <div key={u._id} className="activity-item">
-                        <div className="activity-avatar">{u.name?.charAt(0) || 'U'}</div>
-                        <div className="activity-details">
-                          <p><strong>{u.name}</strong> registered</p>
-                          <small>{new Date(u.createdAt).toLocaleDateString()}</small>
+              {['newUsers', 'pendingInstitutes', 'recentReviews'].map((sectionKey) => (
+                <div key={sectionKey} className="activity-section">
+                  <h3>{sectionKey.replace(/([A-Z])/g, ' $1')}</h3>
+                  <div className="activity-list">
+                    {Array.isArray(recentActivities[sectionKey]) &&
+                    recentActivities[sectionKey].length > 0 ? (
+                      recentActivities[sectionKey].map((item) => (
+                        <div key={item._id} className="activity-item">
+                          <div className="activity-avatar">
+                            {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
+                          </div>
+                          <div className="activity-details">
+                            {sectionKey === 'newUsers' && (
+                              <>
+                                <p><strong>{item.name}</strong> registered</p>
+                                <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
+                              </>
+                            )}
+                            {sectionKey === 'pendingInstitutes' && (
+                              <p><strong>{item.name}</strong> waiting approval</p>
+                            )}
+                            {sectionKey === 'recentReviews' && (
+                              <>
+                                <p>
+                                  <strong>{item.user?.name}</strong> reviewed
+                                  <strong> {item.institute?.name}</strong>
+                                </p>
+                                <div>{'⭐'.repeat(item.rating ?? 0)}</div>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No new users</p>
-                  )}
+                      ))
+                    ) : (
+                      <p>No {sectionKey.replace(/([A-Z])/g, ' ').toLowerCase()}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-
-              <div className="activity-section">
-                <h3>Pending Institutes</h3>
-                <div className="activity-list">
-                  {recentActivities.pendingInstitutes.length > 0 ? (
-                    recentActivities.pendingInstitutes.map((i) => (
-                      <div key={i._id} className="activity-item">
-                        <div className="activity-avatar">{i.name?.charAt(0) || 'I'}</div>
-                        <div className="activity-details">
-                          <p><strong>{i.name}</strong> waiting approval</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No pending institutes</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="activity-section">
-                <h3>Recent Reviews</h3>
-                <div className="activity-list">
-                  {recentActivities.recentReviews.length > 0 ? (
-                    recentActivities.recentReviews.map((r) => (
-                      <div key={r._id} className="activity-item">
-                        <div className="activity-avatar">{r.user?.name?.charAt(0) || 'U'}</div>
-                        <div className="activity-details">
-                          <p>
-                            <strong>{r.user?.name}</strong> reviewed
-                            <strong> {r.institute?.name}</strong>
-                          </p>
-                          <div>{'⭐'.repeat(r.rating || 0)}</div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No recent reviews</p>
-                  )}
-                </div>
-              </div>
-
+              ))}
             </div>
 
           </div>
