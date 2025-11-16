@@ -26,7 +26,7 @@ export const instituteService = {
     try {
       const response = await api.get("/institutes/featured");
       const featured = response.data?.institutes;
-      return Array.isArray(featured) ? featured : [];
+      return Array.isArray(featured) ? featured : []; // fallback to empty array
     } catch (err) {
       console.error("Error fetching featured institutes:", err);
       return [];
