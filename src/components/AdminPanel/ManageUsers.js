@@ -7,16 +7,19 @@ const ManageUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []); // The empty dependency array ensures this runs only once on mount
+  }, []);
 
   const fetchUsers = async () => {
     try {
-      // The adminService is designed to always return an array (either data or [])
-      const usersData = await adminService.getAllUsers();
+      const data = await adminService.getAllUsers();
+      // FIX: Ensure users is always an array with multiple fallbacks
+      const usersData = Array.isArray(data) ? data : 
+                       data?.users ? data.users : 
+                       data?.data ? data.data : [];
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
-      // As a final safeguard, ensure the state is an array on any unexpected error
+      // FIX: Set empty array on error to prevent crashes
       setUsers([]);
     } finally {
       setLoading(false);
@@ -24,22 +27,22 @@ const ManageUsers = () => {
   };
 
   const toggleUserStatus = async (userId, currentStatus) => {
-    // Optimistically update the UI first for a better user experience
-    const originalUsers = [...users];
-    setUsers(prevUsers => 
-      prevUsers.map(user => 
-        user._id === userId ? { ...user, isActive: !currentStatus } : user
-      )
-    );
-
     try {
       await adminService.toggleUserStatus(userId, !currentStatus);
+      // FIX: Added array safety check before mapping
+      setUsers(prevUsers => 
+        Array.isArray(prevUsers) 
+          ? prevUsers.map(user => 
+              user._id === userId 
+                ? { ...user, isActive: !currentStatus }
+                : user
+            )
+          : []
+      );
       alert(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error('Error updating user status:', error);
-      // Revert the state if the API call fails
-      setUsers(originalUsers);
-      alert('Error updating user status. Please try again.');
+      alert('Error updating user status');
     }
   };
 
@@ -51,7 +54,7 @@ const ManageUsers = () => {
     <div className="manage-users">
       <div className="page-header">
         <h2>Manage Users</h2>
-        <p>Total Users: {users.length}</p>
+        <p>Total Users: {Array.isArray(users) ? users.length : 0}</p>
       </div>
 
       <div className="users-table">
@@ -68,11 +71,13 @@ const ManageUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
-              <tr key={user._id}>
+            {/* FIX: Added array safety check before mapping */}
+            {Array.isArray(users) && users.map(user => (
+              <tr key={user._id || user.id}>
                 <td>
                   <div className="user-info">
                     <div className="user-avatar">
+                      {/* FIX: Added safety check for user name */}
                       {user.name?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     {user.name || 'Unknown User'}
@@ -91,6 +96,7 @@ const ManageUsers = () => {
                   </span>
                 </td>
                 <td>
+                  {/* FIX: Added safety check for date */}
                   {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}
                 </td>
                 <td>
@@ -106,9 +112,10 @@ const ManageUsers = () => {
           </tbody>
         </table>
 
-        {users.length === 0 && (
+        {/* FIX: Added empty state */}
+        {(!users || !Array.isArray(users) || users.length === 0) && (
           <div className="empty-state">
-            <p>No users found.</p>
+            <p>No users found</p>
           </div>
         )}
       </div>
