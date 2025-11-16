@@ -4,22 +4,23 @@ export const adminService = {
   getDashboardAnalytics: async () => {
     try {
       const response = await api.get('/admin/dashboard');
-      const data = response?.data || {};
-
-      // Provide defaults for analytics metrics
-      return {
+      return response?.data || {
         analytics: {
-          totalUsers: data.analytics?.totalUsers || 0,
-          totalInstitutes: data.analytics?.totalInstitutes || 0,
-          pendingInstitutes: data.analytics?.pendingInstitutes || 0,
-          totalReviews: data.analytics?.totalReviews || 0,
-          totalEnquiries: data.analytics?.totalEnquiries || 0,
-          totalCourses: data.analytics?.totalCourses || 0,
+          totalUsers: 0,
+          totalInstitutes: 0,
+          pendingInstitutes: 0,
+          totalReviews: 0,
+          totalEnquiries: 0,
+          totalCourses: 0,
         },
-        recentActivities: data.recentActivities || [],
+        recentActivities: {
+          newUsers: [],
+          pendingInstitutes: [],
+          recentReviews: [],
+        },
       };
     } catch (err) {
-      console.error("Error fetching dashboard analytics:", err);
+      console.error('Error fetching dashboard analytics:', err);
       return {
         analytics: {
           totalUsers: 0,
@@ -29,7 +30,11 @@ export const adminService = {
           totalEnquiries: 0,
           totalCourses: 0,
         },
-        recentActivities: [],
+        recentActivities: {
+          newUsers: [],
+          pendingInstitutes: [],
+          recentReviews: [],
+        },
       };
     }
   },
@@ -37,30 +42,40 @@ export const adminService = {
   getPendingInstitutes: async () => {
     try {
       const response = await api.get('/admin/institutes/pending');
-      return response?.data?.institutes || [];
+      return Array.isArray(response?.data?.institutes) ? response.data.institutes : [];
     } catch (err) {
-      console.error("Error fetching pending institutes:", err);
+      console.error('Error fetching pending institutes:', err);
       return [];
     }
   },
 
-  verifyInstitute: async (instituteId) => {
+  updateInstituteStatus: async (instituteId, status) => {
     try {
-      const response = await api.put(`/admin/institutes/${instituteId}/verify`);
-      return response?.data;
+      const response = await api.put(`/admin/institutes/${instituteId}/status`, { status });
+      return response?.data || {};
     } catch (err) {
-      console.error(`Error verifying institute with ID ${instituteId}:`, err);
-      return { error: true };
+      console.error(`Error updating institute status for ${instituteId}:`, err);
+      return {};
     }
   },
 
   getAllUsers: async () => {
     try {
       const response = await api.get('/admin/users');
-      return response?.data?.users || [];
+      return Array.isArray(response?.data?.users) ? response.data.users : [];
     } catch (err) {
-      console.error("Error fetching users list:", err);
+      console.error('Error fetching users:', err);
       return [];
+    }
+  },
+
+  toggleUserStatus: async (userId, isActive) => {
+    try {
+      const response = await api.put(`/admin/users/${userId}/status`, { isActive });
+      return response?.data || {};
+    } catch (err) {
+      console.error(`Error toggling user status for ${userId}:`, err);
+      return {};
     }
   },
 };

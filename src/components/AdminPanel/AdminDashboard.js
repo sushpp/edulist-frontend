@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { adminService } from '../../services/admin';
 import AdminSidebar from './AdminSidebar';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './AdminPanel.css';
 
 const AdminDashboard = () => {
@@ -11,6 +11,8 @@ const AdminDashboard = () => {
     totalInstitutes: 0,
     pendingInstitutes: 0,
     totalReviews: 0,
+    totalEnquiries: 0,
+    totalCourses: 0,
   });
 
   const [recentActivities, setRecentActivities] = useState({
@@ -29,44 +31,29 @@ const AdminDashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    setLoading(true);
     try {
       const response = await adminService.getDashboardAnalytics();
-      console.log('📊 Dashboard Data:', response);
 
+      // Safe defaults
+      const data = response?.analytics || {};
       setAnalytics({
-        totalUsers: response.analytics?.totalUsers ?? 0,
-        totalInstitutes: response.analytics?.totalInstitutes ?? 0,
-        pendingInstitutes: response.analytics?.pendingInstitutes ?? 0,
-        totalReviews: response.analytics?.totalReviews ?? 0,
+        totalUsers: data.totalUsers || 0,
+        totalInstitutes: data.totalInstitutes || 0,
+        pendingInstitutes: data.pendingInstitutes || 0,
+        totalReviews: data.totalReviews || 0,
+        totalEnquiries: data.totalEnquiries || 0,
+        totalCourses: data.totalCourses || 0,
       });
 
+      const activities = response?.recentActivities || {};
       setRecentActivities({
-        newUsers: Array.isArray(response.recentActivities?.newUsers)
-          ? response.recentActivities.newUsers
-          : [],
-        pendingInstitutes: Array.isArray(response.recentActivities?.pendingInstitutes)
-          ? response.recentActivities.pendingInstitutes
-          : [],
-        recentReviews: Array.isArray(response.recentActivities?.recentReviews)
-          ? response.recentActivities.recentReviews
-          : [],
+        newUsers: Array.isArray(activities.newUsers) ? activities.newUsers : [],
+        pendingInstitutes: Array.isArray(activities.pendingInstitutes) ? activities.pendingInstitutes : [],
+        recentReviews: Array.isArray(activities.recentReviews) ? activities.recentReviews : [],
       });
-
-    } catch (error) {
-      console.error('❌ Dashboard fetch error:', error);
-
-      setAnalytics({
-        totalUsers: 0,
-        totalInstitutes: 0,
-        pendingInstitutes: 0,
-        totalReviews: 0,
-      });
-
-      setRecentActivities({
-        newUsers: [],
-        pendingInstitutes: [],
-        recentReviews: [],
-      });
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -89,11 +76,8 @@ const AdminDashboard = () => {
 
       <div className="dashboard-main">
         <header className="dashboard-header">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-            ☰
-          </button>
+          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
           <h1>Admin Dashboard</h1>
-
           <div className="user-info">
             <span>Welcome, {user?.name || 'Admin'}</span>
             <button onClick={handleLogout} className="logout-btn">Logout</button>
@@ -101,107 +85,39 @@ const AdminDashboard = () => {
         </header>
 
         <div className="dashboard-content">
-          <div className="admin-dashboard">
-
-            {/* Analytics Cards */}
-            <div className="analytics-grid">
-              <div className="analytics-card">
-                <div className="card-icon users">👥</div>
-                <div className="card-content">
-                  <h3>{analytics.totalUsers}</h3>
-                  <p>Total Users</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon institutes">🏫</div>
-                <div className="card-content">
-                  <h3>{analytics.totalInstitutes}</h3>
-                  <p>Approved Institutes</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon pending">⏳</div>
-                <div className="card-content">
-                  <h3>{analytics.pendingInstitutes}</h3>
-                  <p>Pending Institutes</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon reviews">⭐</div>
-                <div className="card-content">
-                  <h3>{analytics.totalReviews}</h3>
-                  <p>Total Reviews</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Activities */}
-            <div className="recent-activities">
-              <div className="activity-section">
-                <h3>New Users</h3>
-                <div className="activity-list">
-                  {recentActivities.newUsers.length > 0 ? (
-                    recentActivities.newUsers.map((u) => (
-                      <div key={u._id} className="activity-item">
-                        <div className="activity-avatar">{u.name?.charAt(0) || 'U'}</div>
-                        <div className="activity-details">
-                          <p><strong>{u.name}</strong> registered</p>
-                          <small>{new Date(u.createdAt).toLocaleDateString()}</small>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No new users</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="activity-section">
-                <h3>Pending Institutes</h3>
-                <div className="activity-list">
-                  {recentActivities.pendingInstitutes.length > 0 ? (
-                    recentActivities.pendingInstitutes.map((i) => (
-                      <div key={i._id} className="activity-item">
-                        <div className="activity-avatar">{i.name?.charAt(0) || 'I'}</div>
-                        <div className="activity-details">
-                          <p><strong>{i.name}</strong> waiting approval</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No pending institutes</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="activity-section">
-                <h3>Recent Reviews</h3>
-                <div className="activity-list">
-                  {recentActivities.recentReviews.length > 0 ? (
-                    recentActivities.recentReviews.map((r) => (
-                      <div key={r._id} className="activity-item">
-                        <div className="activity-avatar">{r.user?.name?.charAt(0) || 'U'}</div>
-                        <div className="activity-details">
-                          <p>
-                            <strong>{r.user?.name}</strong> reviewed
-                            <strong> {r.institute?.name}</strong>
-                          </p>
-                          <div>{'⭐'.repeat(r.rating || 0)}</div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No recent reviews</p>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
+          <div className="analytics-grid">
+            <div className="analytics-card"><h3>{analytics.totalUsers}</h3><p>Total Users</p></div>
+            <div className="analytics-card"><h3>{analytics.totalInstitutes}</h3><p>Approved Institutes</p></div>
+            <div className="analytics-card"><h3>{analytics.pendingInstitutes}</h3><p>Pending Institutes</p></div>
+            <div className="analytics-card"><h3>{analytics.totalReviews}</h3><p>Total Reviews</p></div>
+            <div className="analytics-card"><h3>{analytics.totalEnquiries}</h3><p>Total Enquiries</p></div>
+            <div className="analytics-card"><h3>{analytics.totalCourses}</h3><p>Total Courses</p></div>
           </div>
+
+          {/* Recent Activities */}
+          <div className="recent-activities">
+            {['newUsers', 'pendingInstitutes', 'recentReviews'].map(section => (
+              <div key={section} className="activity-section">
+                <h3>{section === 'newUsers' ? 'New Users' : section === 'pendingInstitutes' ? 'Pending Institutes' : 'Recent Reviews'}</h3>
+                <div className="activity-list">
+                  {recentActivities[section]?.length > 0 ? (
+                    recentActivities[section].map(item => (
+                      <div key={item._id} className="activity-item">
+                        <div className="activity-avatar">{item.name?.charAt(0) || 'U'}</div>
+                        <div className="activity-details">
+                          {section === 'newUsers' && <p><strong>{item.name}</strong> registered</p>}
+                          {section === 'pendingInstitutes' && <p><strong>{item.name}</strong> waiting approval</p>}
+                          {section === 'recentReviews' && <p><strong>{item.user?.name}</strong> reviewed <strong>{item.institute?.name}</strong> ⭐{item.rating || 0}</p>}
+                          <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
+                        </div>
+                      </div>
+                    ))
+                  ) : (<p>No {section === 'newUsers' ? 'new users' : section === 'pendingInstitutes' ? 'pending institutes' : 'recent reviews'}</p>)}
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       </div>
     </div>
