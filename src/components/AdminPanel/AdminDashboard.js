@@ -6,8 +6,6 @@ import { useAuth } from '../../context/AuthContext';
 import './AdminPanel.css';
 
 const AdminDashboard = () => {
-  // --- STATE INITIALIZATION ---
-  // Initialize analytics safely
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -15,9 +13,7 @@ const AdminDashboard = () => {
     totalReviews: 0,
   });
 
-  // FIX 1: Add missing state for featured institutes
   const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
-
   const [recentActivities, setRecentActivities] = useState({
     newUsers: [],
     pendingInstitutes: [],
@@ -36,51 +32,18 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const response = await adminService.getDashboardAnalytics();
+      console.log('✅ Dashboard data received:', response);
 
-      // --- CRITICAL DEBUGGING STEP ---
-      // Log the response to see EXACTLY what your API is sending.
-      console.log('API Response from getDashboardAnalytics:', response);
+      // The adminService is designed to always return a safe object.
+      // We can now safely destructure it.
+      setAnalytics(response.analytics);
+      setFeaturedInstitutes(response.featuredInstitutes);
+      setRecentActivities(response.recentActivities);
 
-      // --- SAFE DATA EXTRACTION ---
-      const analyticsData = response?.analytics ?? {};
-      setAnalytics({
-        totalUsers: analyticsData.totalUsers ?? 0,
-        totalInstitutes: analyticsData.totalInstitutes ?? 0,
-        pendingInstitutes: analyticsData.pendingInstitutes ?? 0,
-        totalReviews: analyticsData.totalReviews ?? 0,
-      });
-
-      // FIX 2: Update state with the featured institutes data
-      // The adminService already ensures this is an array.
-      setFeaturedInstitutes(response.featuredInstitutes || []);
-
-      const activitiesData = response?.recentActivities ?? {};
-      setRecentActivities({
-        newUsers: Array.isArray(activitiesData.newUsers) ? activitiesData.newUsers : [],
-        pendingInstitutes: Array.isArray(activitiesData.pendingInstitutes)
-          ? activitiesData.pendingInstitutes
-          : [],
-        recentReviews: Array.isArray(activitiesData.recentReviews)
-          ? activitiesData.recentReviews
-          : [],
-      });
     } catch (error) {
-      console.error('❌ Dashboard fetch error:', error);
-
-      // Reset to safe defaults
-      setAnalytics({
-        totalUsers: 0,
-        totalInstitutes: 0,
-        pendingInstitutes: 0,
-        totalReviews: 0,
-      });
-      // FIX 3: Reset featured institutes on error
-      setFeaturedInstitutes([]);
-      setRecentActivities({
-        newUsers: [],
-        pendingInstitutes: [],
-        recentReviews: [],
-      });
+      // This catch block should now be very difficult to reach,
+      // but it's here as a final safeguard.
+      console.error('❌ A critical error occurred in fetchDashboardData:', error);
     } finally {
       setLoading(false);
     }
@@ -105,7 +68,6 @@ const AdminDashboard = () => {
         <header className="dashboard-header">
           <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
           <h1>Admin Dashboard</h1>
-
           <div className="user-info">
             <span>Welcome, {user?.name || 'Admin'}</span>
             <button onClick={handleLogout} className="logout-btn">Logout</button>
@@ -118,43 +80,39 @@ const AdminDashboard = () => {
             <div className="analytics-card">
               <div className="card-icon users">👥</div>
               <div className="card-content">
-                <h3>{analytics?.totalUsers ?? 0}</h3>
+                <h3>{analytics.totalUsers}</h3>
                 <p>Total Users</p>
               </div>
             </div>
             <div className="analytics-card">
               <div className="card-icon institutes">🏫</div>
               <div className="card-content">
-                <h3>{analytics?.totalInstitutes ?? 0}</h3>
+                <h3>{analytics.totalInstitutes}</h3>
                 <p>Approved Institutes</p>
               </div>
             </div>
             <div className="analytics-card">
               <div className="card-icon pending">⏳</div>
               <div className="card-content">
-                <h3>{analytics?.pendingInstitutes ?? 0}</h3>
+                <h3>{analytics.pendingInstitutes}</h3>
                 <p>Pending Institutes</p>
               </div>
             </div>
             <div className="analytics-card">
               <div className="card-icon reviews">⭐</div>
               <div className="card-content">
-                <h3>{analytics?.totalReviews ?? 0}</h3>
+                <h3>{analytics.totalReviews}</h3>
                 <p>Total Reviews</p>
               </div>
             </div>
           </div>
 
-          {/* FIX 4: Add a section to render Featured Institutes Safely */}
+          {/* Featured Institutes Section */}
           <div className="featured-section">
             <h3>Featured Institutes</h3>
             <div className="featured-grid">
-              {/* 
-                This is where the `e.slice is not a function` error was likely happening.
-                We now ensure `featuredInstitutes` is an array before trying to slice or map it.
-              */}
               {featuredInstitutes.length > 0 ? (
-                featuredInstitutes.slice(0, 4).map((institute) => (
+                featuredInstitutes.map((institute) => (
                   <div key={institute._id} className="featured-card">
                     <h4>{institute.name}</h4>
                     <p>{institute.location}</p>
@@ -171,7 +129,7 @@ const AdminDashboard = () => {
             <div key={key} className="activity-section">
               <h3>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</h3>
               <div className="activity-list">
-                {Array.isArray(recentActivities[key]) && recentActivities[key].length > 0 ? (
+                {recentActivities[key].length > 0 ? (
                   recentActivities[key].map((item) => (
                     <div key={item._id || Math.random()} className="activity-item">
                       <div className="activity-avatar">
@@ -202,7 +160,6 @@ const AdminDashboard = () => {
               </div>
             </div>
           ))}
-
         </div>
       </div>
     </div>
