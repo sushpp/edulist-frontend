@@ -1,34 +1,76 @@
-// src/services/institute.js
 import api from "../api/api";
 
 export const instituteService = {
   getAllInstitutes: async (filters = {}) => {
-    const response = await api.get("/institutes", { params: filters });
-    return response.data?.institutes || [];
+    try {
+      const response = await api.get("/institutes", { params: filters });
+      const institutes = response.data?.institutes;
+      return Array.isArray(institutes) ? { institutes } : { institutes: [] };
+    } catch (err) {
+      console.error("Error fetching all institutes:", err);
+      return { institutes: [] };
+    }
   },
 
   getInstituteById: async (id) => {
-    const response = await api.get(`/institutes/${id}`);
-    return response.data?.institute || null;
+    try {
+      const response = await api.get(`/institutes/${id}`);
+      return response.data?.institute || null;
+    } catch (err) {
+      console.error("Error fetching institute by ID:", err);
+      return null;
+    }
+  },
+
+  getFeaturedInstitutes: async () => {
+    try {
+      const response = await api.get("/institutes/featured");
+      const featured = response.data?.institutes;
+      return Array.isArray(featured) ? featured : [];
+    } catch (err) {
+      console.error("Error fetching featured institutes:", err);
+      return [];
+    }
   },
 
   getInstituteProfile: async () => {
-    const response = await api.get("/institutes/profile");
-    return response.data?.institute || null;
+    try {
+      const response = await api.get("/institutes/profile");
+      return response.data?.institute || null;
+    } catch (err) {
+      console.error("Error fetching institute profile:", err);
+      return null;
+    }
   },
 
   updateInstitute: async (data) => {
-    const response = await api.put("/institutes/profile", data);
-    return response.data?.institute || null;
+    try {
+      const response = await api.put("/institutes/profile", data);
+      return response.data?.institute || null;
+    } catch (err) {
+      console.error("Error updating institute profile:", err);
+      return null;
+    }
   },
 
   getPendingInstitutes: async () => {
-    const response = await api.get("/institutes/admin/pending");
-    return response.data?.institutes || [];
+    try {
+      const response = await api.get("/institutes/admin/pending");
+      const pending = response.data?.institutes;
+      return Array.isArray(pending) ? pending : [];
+    } catch (err) {
+      console.error("Error fetching pending institutes:", err);
+      return [];
+    }
   },
 
   updateInstituteStatus: async (instituteId, status) => {
-    const response = await api.put(`/institutes/admin/${instituteId}/status`, { status });
-    return response.data;
-  },
+    try {
+      const response = await api.put(`/institutes/admin/${instituteId}/status`, { status });
+      return response.data || {};
+    } catch (err) {
+      console.error("Error updating institute status:", err);
+      return {};
+    }
+  }
 };
