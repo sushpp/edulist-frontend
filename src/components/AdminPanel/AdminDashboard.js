@@ -6,7 +6,10 @@ import { useAuth } from '../../context/AuthContext';
 import './AdminPanel.css';
 
 const AdminDashboard = () => {
-  // Initialize analytics safely
+  // --- STATE INITIALIZATION ---
+  // We initialize state with a default, well-structured object.
+  // This ensures that on the very first render, `analytics` is NOT undefined,
+  // preventing the error before any data is fetched.
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -20,6 +23,7 @@ const AdminDashboard = () => {
     recentReviews: [],
   });
 
+  // A loading state is crucial. It prevents rendering components with incomplete data.
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
@@ -33,7 +37,16 @@ const AdminDashboard = () => {
     try {
       const response = await adminService.getDashboardAnalytics();
 
-      // Safe access with optional chaining and fallback
+      // --- CRITICAL DEBUGGING STEP ---
+      // Log the response to see EXACTLY what your API is sending.
+      // This is the most important step to verify the data structure.
+      console.log('API Response from getDashboardAnalytics:', response);
+
+      // --- SAFE DATA EXTRACTION ---
+      // We use Optional Chaining (?.) and Nullish Coalescing (??) to safely access nested data.
+      // `response?.analytics`: If `response` is null/undefined, it stops and returns undefined.
+      // `?? {}`: If the left side is null or undefined, it provides a default empty object.
+      // This prevents "Cannot read properties of undefined" errors.
       const analyticsData = response?.analytics ?? {};
       setAnalytics({
         totalUsers: analyticsData.totalUsers ?? 0,
@@ -55,7 +68,9 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('❌ Dashboard fetch error:', error);
 
-      // Reset to safe defaults
+      // --- ERROR FALLBACK ---
+      // If the API call fails, we reset the state to safe defaults.
+      // This prevents the UI from crashing and shows zeroed-out data instead.
       setAnalytics({
         totalUsers: 0,
         totalInstitutes: 0,
@@ -68,6 +83,8 @@ const AdminDashboard = () => {
         recentReviews: [],
       });
     } finally {
+      // This block runs whether the try or catch block completes.
+      // It's the perfect place to stop the loading indicator.
       setLoading(false);
     }
   };
@@ -77,6 +94,10 @@ const AdminDashboard = () => {
     navigate('/');
   };
 
+  // --- CONDITIONAL RENDERING ---
+  // If data is still loading, show a loading message.
+  // This prevents the component from rendering with the initial empty state,
+  // which could be confusing for the user.
   if (loading) return <div className="loading">Loading dashboard...</div>;
 
   return (
@@ -104,6 +125,10 @@ const AdminDashboard = () => {
             <div className="analytics-card">
               <div className="card-icon users">👥</div>
               <div className="card-content">
+                {/* --- SAFE RENDERING --- */}
+                {/* Even though `analytics` is initialized, we use `?.` and `??` here as an extra
+                    layer of safety. It guarantees that if `analytics` somehow becomes undefined,
+                    the UI will show "0" instead of crashing. */}
                 <h3>{analytics?.totalUsers ?? 0}</h3>
                 <p>Total Users</p>
               </div>
@@ -134,11 +159,11 @@ const AdminDashboard = () => {
           {/* Recent Activities */}
           {['newUsers', 'pendingInstitutes', 'recentReviews'].map((key) => (
             <div key={key} className="activity-section">
-              <h3>{key.replace(/([A-Z])/g, ' $1')}</h3>
+              <h3>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</h3>
               <div className="activity-list">
                 {Array.isArray(recentActivities[key]) && recentActivities[key].length > 0 ? (
                   recentActivities[key].map((item) => (
-                    <div key={item._id} className="activity-item">
+                    <div key={item._id || Math.random()} className="activity-item"> {/* Added fallback key */}
                       <div className="activity-avatar">
                         {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
                       </div>

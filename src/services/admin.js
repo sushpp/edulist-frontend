@@ -5,7 +5,21 @@ export const adminService = {
   getDashboardAnalytics: async () => {
     try {
       const response = await api.get('/admin/dashboard');
+      
+      // --- CRITICAL DEBUGGING STEP ---
+      // Log the ENTIRE response object from your API helper.
+      // This will show you the status, headers, and data body.
+      console.log('Raw API Response from /admin/dashboard:', response);
+
+      // Ensure `data` is at least an object if response.data is null/undefined
       const data = response?.data || {};
+
+      // --- STRUCTURE VALIDATION ---
+      // Add a warning if the expected 'analytics' object is missing.
+      // This helps you distinguish a network error (caught below) from a data structure error.
+      if (!data || typeof data !== 'object' || !data.analytics) {
+        console.warn("⚠️ API response is missing the expected 'analytics' property. Check your backend endpoint. Received data:", data);
+      }
 
       return {
         analytics: {
@@ -32,7 +46,11 @@ export const adminService = {
         },
       };
     } catch (err) {
-      console.error("Error fetching dashboard analytics:", err);
+      // This block catches network errors (e.g., 404 Not Found, 500 Server Error)
+      // or errors thrown by your `api` helper.
+      console.error("❌ Network or API call error fetching dashboard analytics:", err);
+      
+      // Return a safe, default structure so the frontend doesn't crash.
       return {
         analytics: {
           totalUsers: 0,
