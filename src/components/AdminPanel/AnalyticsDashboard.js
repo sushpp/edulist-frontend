@@ -2,28 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { adminService } from '../../services/admin';
 
 const AnalyticsDashboard = () => {
-  const [analytics, setAnalytics] = useState({});
+  // Initialize with default values to prevent undefined errors
+  const [analytics, setAnalytics] = useState({
+    totalUsers: 0,
+    totalInstitutes: 0,
+    pendingInstitutes: 0,
+    totalReviews: 0,
+    totalEnquiries: 0,
+    totalCourses: 0,
+  });
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [timeRange]);
+  const [error, setError] = useState(null);
 
   const fetchAnalytics = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const data = await adminService.getDashboardAnalytics();
-      setAnalytics(data.analytics);
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
+      const response = await adminService.getDashboardAnalytics();
+      
+      // Safe extraction with defaults
+      const data = response?.analytics || {};
+      setAnalytics({
+        totalUsers: data.totalUsers || 0,
+        totalInstitutes: data.totalInstitutes || 0,
+        pendingInstitutes: data.pendingInstitutes || 0,
+        totalReviews: data.totalReviews || 0,
+        totalEnquiries: data.totalEnquiries || 0,
+        totalCourses: data.totalCourses || 0,
+      });
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      setError('Failed to fetch analytics');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div className="loading">Loading analytics...</div>;
-  }
+  useEffect(() => {
+    fetchAnalytics();
+  }, [timeRange]);
+
+  if (loading) return <div className="loading">Loading analytics...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   return (
     <div className="analytics-dashboard">
@@ -49,7 +70,6 @@ const AnalyticsDashboard = () => {
           <div className="metric-content">
             <h3>{analytics.totalUsers}</h3>
             <p>Total Users</p>
-            <small>+12% from last month</small>
           </div>
         </div>
 
@@ -58,7 +78,6 @@ const AnalyticsDashboard = () => {
           <div className="metric-content">
             <h3>{analytics.totalInstitutes}</h3>
             <p>Approved Institutes</p>
-            <small>+8% from last month</small>
           </div>
         </div>
 
@@ -67,7 +86,6 @@ const AnalyticsDashboard = () => {
           <div className="metric-content">
             <h3>{analytics.pendingInstitutes}</h3>
             <p>Pending Approvals</p>
-            <small>Waiting for review</small>
           </div>
         </div>
 
@@ -76,7 +94,6 @@ const AnalyticsDashboard = () => {
           <div className="metric-content">
             <h3>{analytics.totalReviews}</h3>
             <p>Total Reviews</p>
-            <small>+25% from last month</small>
           </div>
         </div>
 
@@ -85,7 +102,6 @@ const AnalyticsDashboard = () => {
           <div className="metric-content">
             <h3>{analytics.totalEnquiries}</h3>
             <p>Total Enquiries</p>
-            <small>+15% from last month</small>
           </div>
         </div>
 
@@ -94,7 +110,6 @@ const AnalyticsDashboard = () => {
           <div className="metric-content">
             <h3>{analytics.totalCourses}</h3>
             <p>Total Courses</p>
-            <small>Active courses listed</small>
           </div>
         </div>
       </div>
@@ -104,62 +119,13 @@ const AnalyticsDashboard = () => {
         <div className="chart-card">
           <h3>User Registration Trend</h3>
           <div className="chart-placeholder">
-            <p>📈 Chart visualization would be implemented with a charting library</p>
-            <div className="mock-chart">
-              <div className="chart-bar" style={{ height: '80%' }}></div>
-              <div className="chart-bar" style={{ height: '60%' }}></div>
-              <div className="chart-bar" style={{ height: '90%' }}></div>
-              <div className="chart-bar" style={{ height: '70%' }}></div>
-              <div className="chart-bar" style={{ height: '85%' }}></div>
-            </div>
+            <p>📈 Chart visualization goes here</p>
           </div>
         </div>
-
         <div className="chart-card">
           <h3>Institute Categories</h3>
           <div className="chart-placeholder">
-            <p>📊 Category distribution chart</p>
-            <div className="mock-pie-chart">
-              <div className="pie-segment" style={{ backgroundColor: '#3498db' }}></div>
-              <div className="pie-segment" style={{ backgroundColor: '#e74c3c' }}></div>
-              <div className="pie-segment" style={{ backgroundColor: '#2ecc71' }}></div>
-              <div className="pie-segment" style={{ backgroundColor: '#f39c12' }}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="activity-section">
-        <h3>Recent Platform Activity</h3>
-        <div className="activity-list">
-          <div className="activity-item">
-            <div className="activity-icon">🎓</div>
-            <div className="activity-content">
-              <p><strong>5 new institutes</strong> registered in the last 24 hours</p>
-              <small>2 hours ago</small>
-            </div>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon">⭐</div>
-            <div className="activity-content">
-              <p><strong>12 new reviews</strong> submitted by users</p>
-              <small>4 hours ago</small>
-            </div>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon">📧</div>
-            <div className="activity-content">
-              <p><strong>8 new enquiries</strong> sent to institutes</p>
-              <small>6 hours ago</small>
-            </div>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon">👥</div>
-            <div className="activity-content">
-              <p><strong>23 new users</strong> joined the platform</p>
-              <small>1 day ago</small>
-            </div>
+            <p>📊 Category distribution chart goes here</p>
           </div>
         </div>
       </div>

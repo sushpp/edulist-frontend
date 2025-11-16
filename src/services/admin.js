@@ -4,16 +4,36 @@ export const adminService = {
   getDashboardAnalytics: async () => {
     try {
       const response = await api.get('/admin/dashboard');
-      return response?.data || {}; // Return entire object containing analytics + recentActivities
+      const data = response?.data || {};
+
+      // Provide defaults for analytics metrics
+      return {
+        analytics: {
+          totalUsers: data.analytics?.totalUsers || 0,
+          totalInstitutes: data.analytics?.totalInstitutes || 0,
+          pendingInstitutes: data.analytics?.pendingInstitutes || 0,
+          totalReviews: data.analytics?.totalReviews || 0,
+          totalEnquiries: data.analytics?.totalEnquiries || 0,
+          totalCourses: data.analytics?.totalCourses || 0,
+        },
+        recentActivities: data.recentActivities || [],
+      };
     } catch (err) {
       console.error("Error fetching dashboard analytics:", err);
-      return {};
+      return {
+        analytics: {
+          totalUsers: 0,
+          totalInstitutes: 0,
+          pendingInstitutes: 0,
+          totalReviews: 0,
+          totalEnquiries: 0,
+          totalCourses: 0,
+        },
+        recentActivities: [],
+      };
     }
   },
 
-  /**
-   * Get a list of all pending institutes awaiting approval.
-   */
   getPendingInstitutes: async () => {
     try {
       const response = await api.get('/admin/institutes/pending');
@@ -24,9 +44,6 @@ export const adminService = {
     }
   },
 
-  /**
-   * Verify an institute by its ID.
-   */
   verifyInstitute: async (instituteId) => {
     try {
       const response = await api.put(`/admin/institutes/${instituteId}/verify`);
@@ -37,9 +54,6 @@ export const adminService = {
     }
   },
 
-  /**
-   * Get a list of all registered users.
-   */
   getAllUsers: async () => {
     try {
       const response = await api.get('/admin/users');

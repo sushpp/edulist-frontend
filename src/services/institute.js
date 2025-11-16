@@ -5,7 +5,7 @@ export const instituteService = {
     try {
       const response = await api.get("/institutes", { params: filters });
       const institutes = response.data?.institutes;
-      return Array.isArray(institutes) ? { institutes } : { institutes: [] };
+      return { institutes: Array.isArray(institutes) ? institutes : [] };
     } catch (err) {
       console.error("Error fetching all institutes:", err);
       return { institutes: [] };
@@ -15,10 +15,10 @@ export const instituteService = {
   getInstituteById: async (id) => {
     try {
       const response = await api.get(`/institutes/${id}`);
-      return response.data?.institute || null;
+      return response.data?.institute || {};
     } catch (err) {
       console.error("Error fetching institute by ID:", err);
-      return null;
+      return {};
     }
   },
 
@@ -36,20 +36,20 @@ export const instituteService = {
   getInstituteProfile: async () => {
     try {
       const response = await api.get("/institutes/profile");
-      return response.data?.institute || null;
+      return response.data?.institute || {};
     } catch (err) {
       console.error("Error fetching institute profile:", err);
-      return null;
+      return {};
     }
   },
 
   updateInstitute: async (data) => {
     try {
       const response = await api.put("/institutes/profile", data);
-      return response.data?.institute || null;
+      return response.data?.institute || {};
     } catch (err) {
       console.error("Error updating institute profile:", err);
-      return null;
+      return {};
     }
   },
 
