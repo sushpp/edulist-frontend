@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import './AdminPanel.css';
 
 const AdminDashboard = () => {
+  // --- STATE INITIALIZATION ---
+  // State is initialized with safe, non-null, non-undefined defaults.
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -31,19 +33,41 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('🚀 Fetching dashboard data...');
       const response = await adminService.getDashboardAnalytics();
-      console.log('✅ Dashboard data received:', response);
 
-      // The adminService is designed to always return a safe object.
-      // We can now safely destructure it.
-      setAnalytics(response.analytics);
-      setFeaturedInstitutes(response.featuredInstitutes);
-      setRecentActivities(response.recentActivities);
+      // --- CRITICAL DEBUGGING ---
+      // This log will show you EXACTLY what the service returned.
+      console.log('✅ Service returned:', response);
+
+      // --- ULTIMATE SAFETY CHECKS ---
+      // Even though the service should be safe, we double-check here.
+      // This makes the component independent and impossible to crash from bad data.
+      const safeAnalytics = (response && typeof response === 'object' && response.analytics) ? response.analytics : {};
+      const safeFeatured = (response && Array.isArray(response.featuredInstitutes)) ? response.featuredInstitutes : [];
+      const safeActivities = (response && typeof response === 'object' && response.recentActivities) ? response.recentActivities : {};
+
+      setAnalytics({
+        totalUsers: safeAnalytics.totalUsers ?? 0,
+        totalInstitutes: safeAnalytics.totalInstitutes ?? 0,
+        pendingInstitutes: safeAnalytics.pendingInstitutes ?? 0,
+        totalReviews: safeAnalytics.totalReviews ?? 0,
+      });
+
+      setFeaturedInstitutes(safeFeatured);
+
+      setRecentActivities({
+        newUsers: Array.isArray(safeActivities.newUsers) ? safeActivities.newUsers : [],
+        pendingInstitutes: Array.isArray(safeActivities.pendingInstitutes) ? safeActivities.pendingInstitutes : [],
+        recentReviews: Array.isArray(safeActivities.recentReviews) ? safeActivities.recentReviews : [],
+      });
 
     } catch (error) {
-      // This catch block should now be very difficult to reach,
-      // but it's here as a final safeguard.
       console.error('❌ A critical error occurred in fetchDashboardData:', error);
+      // In case of a total failure, reset to empty state.
+      setAnalytics({ totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0 });
+      setFeaturedInstitutes([]);
+      setRecentActivities({ newUsers: [], pendingInstitutes: [], recentReviews: [] });
     } finally {
       setLoading(false);
     }
@@ -111,17 +135,14 @@ const AdminDashboard = () => {
           <div className="featured-section">
             <h3>Featured Institutes</h3>
             <div className="featured-grid">
-              {featuredInstitutes.length > 0 ? (
-                featuredInstitutes.map((institute) => (
-                  <div key={institute._id} className="featured-card">
-                    <h4>{institute.name}</h4>
-                    <p>{institute.location}</p>
-                  </div>
-                ))
-              ) : (
-                <p>No featured institutes found.</p>
-              )}
+              {featuredInstitutes.map((institute) => (
+                <div key={institute._id || Math.random()} className="featured-card">
+                  <h4>{institute.name || 'Unnamed Institute'}</h4>
+                  <p>{institute.location || 'No location'}</p>
+                </div>
+              ))}
             </div>
+            {featuredInstitutes.length === 0 && <p>No featured institutes found.</p>}
           </div>
 
           {/* Recent Activities */}
@@ -129,35 +150,32 @@ const AdminDashboard = () => {
             <div key={key} className="activity-section">
               <h3>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</h3>
               <div className="activity-list">
-                {recentActivities[key].length > 0 ? (
-                  recentActivities[key].map((item) => (
-                    <div key={item._id || Math.random()} className="activity-item">
-                      <div className="activity-avatar">
-                        {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
-                      </div>
-                      <div className="activity-details">
-                        {key === 'newUsers' && (
-                          <>
-                            <p><strong>{item.name}</strong> registered</p>
-                            <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
-                          </>
-                        )}
-                        {key === 'pendingInstitutes' && (
-                          <p><strong>{item.name}</strong> waiting approval</p>
-                        )}
-                        {key === 'recentReviews' && (
-                          <>
-                            <p><strong>{item.user?.name}</strong> reviewed <strong>{item.institute?.name}</strong></p>
-                            <div>{'⭐'.repeat(item.rating ?? 0)}</div>
-                          </>
-                        )}
-                      </div>
+                {recentActivities[key].map((item) => (
+                  <div key={item._id || Math.random()} className="activity-item">
+                    <div className="activity-avatar">
+                      {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
                     </div>
-                  ))
-                ) : (
-                  <p>No {key.replace(/([A-Z])/g, ' ').toLowerCase()}</p>
-                )}
+                    <div className="activity-details">
+                      {key === 'newUsers' && (
+                        <>
+                          <p><strong>{item.name}</strong> registered</p>
+                          <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
+                        </>
+                      )}
+                      {key === 'pendingInstitutes' && (
+                        <p><strong>{item.name}</strong> waiting approval</p>
+                      )}
+                      {key === 'recentReviews' && (
+                        <>
+                          <p><strong>{item.user?.name}</strong> reviewed <strong>{item.institute?.name}</strong></p>
+                          <div>{'⭐'.repeat(item.rating ?? 0)}</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
+              {recentActivities[key].length === 0 && <p>No {key.replace(/([A-Z])/g, ' ').toLowerCase()}.</p>}
             </div>
           ))}
         </div>
