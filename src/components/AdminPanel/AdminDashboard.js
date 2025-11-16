@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import './AdminPanel.css';
 
 const AdminDashboard = () => {
+  // Initialize analytics safely
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -31,10 +32,9 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const response = await adminService.getDashboardAnalytics();
-      console.log('📊 Dashboard Data:', response);
 
-      // Safe analytics
-      const analyticsData = response?.analytics || {};
+      // Safe access with optional chaining and fallback
+      const analyticsData = response?.analytics ?? {};
       setAnalytics({
         totalUsers: analyticsData.totalUsers ?? 0,
         totalInstitutes: analyticsData.totalInstitutes ?? 0,
@@ -42,8 +42,7 @@ const AdminDashboard = () => {
         totalReviews: analyticsData.totalReviews ?? 0,
       });
 
-      // Safe recent activities
-      const activitiesData = response?.recentActivities || {};
+      const activitiesData = response?.recentActivities ?? {};
       setRecentActivities({
         newUsers: Array.isArray(activitiesData.newUsers) ? activitiesData.newUsers : [],
         pendingInstitutes: Array.isArray(activitiesData.pendingInstitutes)
@@ -55,6 +54,7 @@ const AdminDashboard = () => {
       });
     } catch (error) {
       console.error('❌ Dashboard fetch error:', error);
+
       // Reset to safe defaults
       setAnalytics({
         totalUsers: 0,
@@ -89,9 +89,7 @@ const AdminDashboard = () => {
 
       <div className="dashboard-main">
         <header className="dashboard-header">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-            ☰
-          </button>
+          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
           <h1>Admin Dashboard</h1>
 
           <div className="user-info">
@@ -101,87 +99,75 @@ const AdminDashboard = () => {
         </header>
 
         <div className="dashboard-content">
-          <div className="admin-dashboard">
-
-            {/* Analytics Cards */}
-            <div className="analytics-grid">
-              <div className="analytics-card">
-                <div className="card-icon users">👥</div>
-                <div className="card-content">
-                  <h3>{analytics?.totalUsers ?? 0}</h3>
-                  <p>Total Users</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon institutes">🏫</div>
-                <div className="card-content">
-                  <h3>{analytics?.totalInstitutes ?? 0}</h3>
-                  <p>Approved Institutes</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon pending">⏳</div>
-                <div className="card-content">
-                  <h3>{analytics?.pendingInstitutes ?? 0}</h3>
-                  <p>Pending Institutes</p>
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <div className="card-icon reviews">⭐</div>
-                <div className="card-content">
-                  <h3>{analytics?.totalReviews ?? 0}</h3>
-                  <p>Total Reviews</p>
-                </div>
+          {/* Analytics Cards */}
+          <div className="analytics-grid">
+            <div className="analytics-card">
+              <div className="card-icon users">👥</div>
+              <div className="card-content">
+                <h3>{analytics?.totalUsers ?? 0}</h3>
+                <p>Total Users</p>
               </div>
             </div>
-
-            {/* Recent Activities */}
-            <div className="recent-activities">
-              {['newUsers', 'pendingInstitutes', 'recentReviews'].map((sectionKey) => (
-                <div key={sectionKey} className="activity-section">
-                  <h3>{sectionKey.replace(/([A-Z])/g, ' $1')}</h3>
-                  <div className="activity-list">
-                    {Array.isArray(recentActivities[sectionKey]) &&
-                    recentActivities[sectionKey].length > 0 ? (
-                      recentActivities[sectionKey].map((item) => (
-                        <div key={item._id} className="activity-item">
-                          <div className="activity-avatar">
-                            {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
-                          </div>
-                          <div className="activity-details">
-                            {sectionKey === 'newUsers' && (
-                              <>
-                                <p><strong>{item.name}</strong> registered</p>
-                                <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
-                              </>
-                            )}
-                            {sectionKey === 'pendingInstitutes' && (
-                              <p><strong>{item.name}</strong> waiting approval</p>
-                            )}
-                            {sectionKey === 'recentReviews' && (
-                              <>
-                                <p>
-                                  <strong>{item.user?.name}</strong> reviewed
-                                  <strong> {item.institute?.name}</strong>
-                                </p>
-                                <div>{'⭐'.repeat(item.rating ?? 0)}</div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No {sectionKey.replace(/([A-Z])/g, ' ').toLowerCase()}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="analytics-card">
+              <div className="card-icon institutes">🏫</div>
+              <div className="card-content">
+                <h3>{analytics?.totalInstitutes ?? 0}</h3>
+                <p>Approved Institutes</p>
+              </div>
             </div>
-
+            <div className="analytics-card">
+              <div className="card-icon pending">⏳</div>
+              <div className="card-content">
+                <h3>{analytics?.pendingInstitutes ?? 0}</h3>
+                <p>Pending Institutes</p>
+              </div>
+            </div>
+            <div className="analytics-card">
+              <div className="card-icon reviews">⭐</div>
+              <div className="card-content">
+                <h3>{analytics?.totalReviews ?? 0}</h3>
+                <p>Total Reviews</p>
+              </div>
+            </div>
           </div>
+
+          {/* Recent Activities */}
+          {['newUsers', 'pendingInstitutes', 'recentReviews'].map((key) => (
+            <div key={key} className="activity-section">
+              <h3>{key.replace(/([A-Z])/g, ' $1')}</h3>
+              <div className="activity-list">
+                {Array.isArray(recentActivities[key]) && recentActivities[key].length > 0 ? (
+                  recentActivities[key].map((item) => (
+                    <div key={item._id} className="activity-item">
+                      <div className="activity-avatar">
+                        {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
+                      </div>
+                      <div className="activity-details">
+                        {key === 'newUsers' && (
+                          <>
+                            <p><strong>{item.name}</strong> registered</p>
+                            <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
+                          </>
+                        )}
+                        {key === 'pendingInstitutes' && (
+                          <p><strong>{item.name}</strong> waiting approval</p>
+                        )}
+                        {key === 'recentReviews' && (
+                          <>
+                            <p><strong>{item.user?.name}</strong> reviewed <strong>{item.institute?.name}</strong></p>
+                            <div>{'⭐'.repeat(item.rating ?? 0)}</div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p>No {key.replace(/([A-Z])/g, ' ').toLowerCase()}</p>
+                )}
+              </div>
+            </div>
+          ))}
+
         </div>
       </div>
     </div>
