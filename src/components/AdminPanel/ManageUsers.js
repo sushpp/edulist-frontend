@@ -10,13 +10,16 @@ const ManageUsers = () => {
   }, []);
 
   const fetchUsers = async () => {
-    setLoading(true);
     try {
       const data = await adminService.getAllUsers();
-      // Ensure array
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Error fetching users:', err);
+      // FIX: Ensure users is always an array with multiple fallbacks
+      const usersData = Array.isArray(data) ? data : 
+                       data?.users ? data.users : 
+                       data?.data ? data.data : [];
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      // FIX: Set empty array on error to prevent crashes
       setUsers([]);
     } finally {
       setLoading(false);
@@ -26,28 +29,35 @@ const ManageUsers = () => {
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       await adminService.toggleUserStatus(userId, !currentStatus);
-      setUsers(prev =>
-        Array.isArray(prev)
-          ? prev.map(u => (u._id === userId ? { ...u, isActive: !currentStatus } : u))
+      // FIX: Added array safety check before mapping
+      setUsers(prevUsers => 
+        Array.isArray(prevUsers) 
+          ? prevUsers.map(user => 
+              user._id === userId 
+                ? { ...user, isActive: !currentStatus }
+                : user
+            )
           : []
       );
       alert(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-    } catch (err) {
-      console.error('Error toggling user status:', err);
+    } catch (error) {
+      console.error('Error updating user status:', error);
       alert('Error updating user status');
     }
   };
 
-  if (loading) return <div className="loading">Loading users...</div>;
+  if (loading) {
+    return <div className="loading">Loading users...</div>;
+  }
 
   return (
     <div className="manage-users">
-      <h2>Manage Users</h2>
-      <p>Total Users: {Array.isArray(users) ? users.length : 0}</p>
+      <div className="page-header">
+        <h2>Manage Users</h2>
+        <p>Total Users: {Array.isArray(users) ? users.length : 0}</p>
+      </div>
 
-      {!Array.isArray(users) || users.length === 0 ? (
-        <p>No users found</p>
-      ) : (
+      <div className="users-table">
         <table>
           <thead>
             <tr>
@@ -61,16 +71,39 @@ const ManageUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
+            {/* FIX: Added array safety check before mapping */}
+            {Array.isArray(users) && users.map(user => (
               <tr key={user._id || user.id}>
-                <td>{user.name || 'Unknown User'}</td>
+                <td>
+                  <div className="user-info">
+                    <div className="user-avatar">
+                      {/* FIX: Added safety check for user name */}
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    {user.name || 'Unknown User'}
+                  </div>
+                </td>
                 <td>{user.email || 'No email'}</td>
                 <td>{user.phone || 'No phone'}</td>
-                <td>{user.role || 'user'}</td>
-                <td>{user.isActive ? 'Active' : 'Inactive'}</td>
-                <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}</td>
                 <td>
-                  <button onClick={() => toggleUserStatus(user._id, user.isActive)}>
+                  <span className={`role-badge ${user.role || 'user'}`}>
+                    {user.role || 'user'}
+                  </span>
+                </td>
+                <td>
+                  <span className={`status-badge ${user.isActive ? 'active' : 'inactive'}`}>
+                    {user.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td>
+                  {/* FIX: Added safety check for date */}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}
+                </td>
+                <td>
+                  <button
+                    onClick={() => toggleUserStatus(user._id, user.isActive)}
+                    className={`btn btn-sm ${user.isActive ? 'btn-warning' : 'btn-success'}`}
+                  >
                     {user.isActive ? 'Deactivate' : 'Activate'}
                   </button>
                 </td>
@@ -78,7 +111,14 @@ const ManageUsers = () => {
             ))}
           </tbody>
         </table>
-      )}
+
+        {/* FIX: Added empty state */}
+        {(!users || !Array.isArray(users) || users.length === 0) && (
+          <div className="empty-state">
+            <p>No users found</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

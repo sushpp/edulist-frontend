@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { adminService } from '../../services/admin';
 
 const AnalyticsDashboard = () => {
+  // Initialize with default values to prevent undefined errors
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -10,22 +11,18 @@ const AnalyticsDashboard = () => {
     totalEnquiries: 0,
     totalCourses: 0,
   });
-
-  const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch analytics and featured institutes
-  const fetchData = async () => {
+  const fetchAnalytics = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const response = await adminService.getDashboardAnalytics();
+      
+      // Safe extraction with defaults
       const data = response?.analytics || {};
-
-      // Safe set analytics values
       setAnalytics({
         totalUsers: data.totalUsers || 0,
         totalInstitutes: data.totalInstitutes || 0,
@@ -34,13 +31,6 @@ const AnalyticsDashboard = () => {
         totalEnquiries: data.totalEnquiries || 0,
         totalCourses: data.totalCourses || 0,
       });
-
-      // Safe fetch featured institutes
-      const featured = Array.isArray(response?.featuredInstitutes)
-        ? response.featuredInstitutes
-        : [];
-      setFeaturedInstitutes(featured);
-
     } catch (err) {
       console.error('Error fetching analytics:', err);
       setError('Failed to fetch analytics');
@@ -50,11 +40,11 @@ const AnalyticsDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchAnalytics();
   }, [timeRange]);
 
   if (loading) return <div className="loading">Loading analytics...</div>;
-  if (error) return <div className="error">{error}</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   return (
     <div className="analytics-dashboard">
@@ -124,20 +114,20 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
 
-      {/* Featured Institutes */}
-      <div className="featured-institutes">
-        <h3>Featured Institutes</h3>
-        {featuredInstitutes.length === 0 ? (
-          <p>No featured institutes available</p>
-        ) : (
-          <ul>
-            {featuredInstitutes.map(inst => (
-              <li key={inst._id || inst.id}>
-                {inst.name || 'Unnamed Institute'} ({inst.category || 'No category'})
-              </li>
-            ))}
-          </ul>
-        )}
+      {/* Charts Section */}
+      <div className="charts-section">
+        <div className="chart-card">
+          <h3>User Registration Trend</h3>
+          <div className="chart-placeholder">
+            <p>📈 Chart visualization goes here</p>
+          </div>
+        </div>
+        <div className="chart-card">
+          <h3>Institute Categories</h3>
+          <div className="chart-placeholder">
+            <p>📊 Category distribution chart goes here</p>
+          </div>
+        </div>
       </div>
     </div>
   );
