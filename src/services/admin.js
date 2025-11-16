@@ -95,17 +95,20 @@ export const adminService = {
   },
 
   // Fetch all users safely
-  getAllUsers: async () => {
-    try {
-      const response = await api.get('/admin/users');
-      return Array.isArray(response?.data?.users)
-        ? response.data.users
-        : [];
-    } catch (err) {
-      console.error("Error fetching users list:", err);
-      return [];
-    }
-  },
+getAllUsers: async () => {
+  try {
+    const response = await api.get('/admin/users');
+    // IMPORTANT: Check if response.data.users is an array.
+    // The backend sends { success: true, users: [...] }
+    return Array.isArray(response?.data?.users)
+      ? response.data.users
+      : [];
+  } catch (err) {
+    console.error("Error fetching users list:", err);
+    // Always return an empty array on error to prevent .map() crashes
+    return [];
+  }
+},
 
   // Toggle user status safely
   toggleUserStatus: async (userId, isActive) => {
