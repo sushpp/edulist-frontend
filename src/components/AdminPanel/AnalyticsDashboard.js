@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../../services/admin';
+import './AnalyticsDashboard.css';
 
 const AnalyticsDashboard = () => {
-  // Initialize with default values to prevent undefined errors
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -11,26 +11,38 @@ const AnalyticsDashboard = () => {
     totalEnquiries: 0,
     totalCourses: 0,
   });
+
+  const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchAnalytics = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
+
     try {
       const response = await adminService.getDashboardAnalytics();
-      
-      // Safe extraction with defaults
-      const data = response?.analytics || {};
+
+      // Safe destructuring with defaults
+      const {
+        analytics: analyticsData = {},
+        featuredInstitutes: featured = [],
+      } = response || {};
+
+      // Ensure analytics values are numbers
       setAnalytics({
-        totalUsers: data.totalUsers || 0,
-        totalInstitutes: data.totalInstitutes || 0,
-        pendingInstitutes: data.pendingInstitutes || 0,
-        totalReviews: data.totalReviews || 0,
-        totalEnquiries: data.totalEnquiries || 0,
-        totalCourses: data.totalCourses || 0,
+        totalUsers: Number(analyticsData.totalUsers) || 0,
+        totalInstitutes: Number(analyticsData.totalInstitutes) || 0,
+        pendingInstitutes: Number(analyticsData.pendingInstitutes) || 0,
+        totalReviews: Number(analyticsData.totalReviews) || 0,
+        totalEnquiries: Number(analyticsData.totalEnquiries) || 0,
+        totalCourses: Number(analyticsData.totalCourses) || 0,
       });
+
+      // Ensure featuredInstitutes is always an array
+      setFeaturedInstitutes(Array.isArray(featured) ? featured : []);
+
     } catch (err) {
       console.error('Error fetching analytics:', err);
       setError('Failed to fetch analytics');
@@ -40,21 +52,18 @@ const AnalyticsDashboard = () => {
   };
 
   useEffect(() => {
-    fetchAnalytics();
+    fetchData();
   }, [timeRange]);
 
   if (loading) return <div className="loading">Loading analytics...</div>;
-  if (error) return <div className="error">Error: {error}</div>;
+  if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="analytics-dashboard">
       <div className="page-header">
         <h2>Platform Analytics</h2>
         <div className="time-filter">
-          <select 
-            value={timeRange} 
-            onChange={(e) => setTimeRange(e.target.value)}
-          >
+          <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
             <option value="week">Last Week</option>
             <option value="month">Last Month</option>
             <option value="quarter">Last Quarter</option>
@@ -114,20 +123,20 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="charts-section">
-        <div className="chart-card">
-          <h3>User Registration Trend</h3>
-          <div className="chart-placeholder">
-            <p>📈 Chart visualization goes here</p>
-          </div>
-        </div>
-        <div className="chart-card">
-          <h3>Institute Categories</h3>
-          <div className="chart-placeholder">
-            <p>📊 Category distribution chart goes here</p>
-          </div>
-        </div>
+      {/* Featured Institutes */}
+      <div className="featured-institutes">
+        <h3>Featured Institutes</h3>
+        {Array.isArray(featuredInstitutes) && featuredInstitutes.length > 0 ? (
+          <ul>
+            {featuredInstitutes.map(inst => (
+              <li key={inst._id || inst.id}>
+                {inst.name || 'Unnamed Institute'} ({inst.category || 'No category'})
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No featured institutes available</p>
+        )}
       </div>
     </div>
   );
