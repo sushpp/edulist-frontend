@@ -7,9 +7,7 @@ import './AdminPanel.css';
 
 const AdminDashboard = () => {
   // --- STATE INITIALIZATION ---
-  // We initialize state with a default, well-structured object.
-  // This ensures that on the very first render, `analytics` is NOT undefined,
-  // preventing the error before any data is fetched.
+  // Initialize analytics safely
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalInstitutes: 0,
@@ -17,13 +15,15 @@ const AdminDashboard = () => {
     totalReviews: 0,
   });
 
+  // FIX 1: Add missing state for featured institutes
+  const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
+
   const [recentActivities, setRecentActivities] = useState({
     newUsers: [],
     pendingInstitutes: [],
     recentReviews: [],
   });
 
-  // A loading state is crucial. It prevents rendering components with incomplete data.
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
@@ -39,14 +39,9 @@ const AdminDashboard = () => {
 
       // --- CRITICAL DEBUGGING STEP ---
       // Log the response to see EXACTLY what your API is sending.
-      // This is the most important step to verify the data structure.
       console.log('API Response from getDashboardAnalytics:', response);
 
       // --- SAFE DATA EXTRACTION ---
-      // We use Optional Chaining (?.) and Nullish Coalescing (??) to safely access nested data.
-      // `response?.analytics`: If `response` is null/undefined, it stops and returns undefined.
-      // `?? {}`: If the left side is null or undefined, it provides a default empty object.
-      // This prevents "Cannot read properties of undefined" errors.
       const analyticsData = response?.analytics ?? {};
       setAnalytics({
         totalUsers: analyticsData.totalUsers ?? 0,
@@ -54,6 +49,10 @@ const AdminDashboard = () => {
         pendingInstitutes: analyticsData.pendingInstitutes ?? 0,
         totalReviews: analyticsData.totalReviews ?? 0,
       });
+
+      // FIX 2: Update state with the featured institutes data
+      // The adminService already ensures this is an array.
+      setFeaturedInstitutes(response.featuredInstitutes || []);
 
       const activitiesData = response?.recentActivities ?? {};
       setRecentActivities({
@@ -68,23 +67,21 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('❌ Dashboard fetch error:', error);
 
-      // --- ERROR FALLBACK ---
-      // If the API call fails, we reset the state to safe defaults.
-      // This prevents the UI from crashing and shows zeroed-out data instead.
+      // Reset to safe defaults
       setAnalytics({
         totalUsers: 0,
         totalInstitutes: 0,
         pendingInstitutes: 0,
         totalReviews: 0,
       });
+      // FIX 3: Reset featured institutes on error
+      setFeaturedInstitutes([]);
       setRecentActivities({
         newUsers: [],
         pendingInstitutes: [],
         recentReviews: [],
       });
     } finally {
-      // This block runs whether the try or catch block completes.
-      // It's the perfect place to stop the loading indicator.
       setLoading(false);
     }
   };
@@ -94,10 +91,6 @@ const AdminDashboard = () => {
     navigate('/');
   };
 
-  // --- CONDITIONAL RENDERING ---
-  // If data is still loading, show a loading message.
-  // This prevents the component from rendering with the initial empty state,
-  // which could be confusing for the user.
   if (loading) return <div className="loading">Loading dashboard...</div>;
 
   return (
@@ -125,10 +118,6 @@ const AdminDashboard = () => {
             <div className="analytics-card">
               <div className="card-icon users">👥</div>
               <div className="card-content">
-                {/* --- SAFE RENDERING --- */}
-                {/* Even though `analytics` is initialized, we use `?.` and `??` here as an extra
-                    layer of safety. It guarantees that if `analytics` somehow becomes undefined,
-                    the UI will show "0" instead of crashing. */}
                 <h3>{analytics?.totalUsers ?? 0}</h3>
                 <p>Total Users</p>
               </div>
@@ -156,6 +145,27 @@ const AdminDashboard = () => {
             </div>
           </div>
 
+          {/* FIX 4: Add a section to render Featured Institutes Safely */}
+          <div className="featured-section">
+            <h3>Featured Institutes</h3>
+            <div className="featured-grid">
+              {/* 
+                This is where the `e.slice is not a function` error was likely happening.
+                We now ensure `featuredInstitutes` is an array before trying to slice or map it.
+              */}
+              {featuredInstitutes.length > 0 ? (
+                featuredInstitutes.slice(0, 4).map((institute) => (
+                  <div key={institute._id} className="featured-card">
+                    <h4>{institute.name}</h4>
+                    <p>{institute.location}</p>
+                  </div>
+                ))
+              ) : (
+                <p>No featured institutes found.</p>
+              )}
+            </div>
+          </div>
+
           {/* Recent Activities */}
           {['newUsers', 'pendingInstitutes', 'recentReviews'].map((key) => (
             <div key={key} className="activity-section">
@@ -163,7 +173,7 @@ const AdminDashboard = () => {
               <div className="activity-list">
                 {Array.isArray(recentActivities[key]) && recentActivities[key].length > 0 ? (
                   recentActivities[key].map((item) => (
-                    <div key={item._id || Math.random()} className="activity-item"> {/* Added fallback key */}
+                    <div key={item._id || Math.random()} className="activity-item">
                       <div className="activity-avatar">
                         {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
                       </div>
