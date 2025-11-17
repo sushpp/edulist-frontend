@@ -1,142 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import './Auth.css';
 
 const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
     password: '',
-    confirmPassword: '',
     role: 'user',
+    phone: '',
+    // Institute fields
     instituteName: '',
-    category: 'school',
+    category: '',
     affiliation: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      pincode: ''
-    },
-    contact: {
-      phone: '',
-      email: '',
-      website: ''
-    },
-    description: ''
+    address: '',
+    city: '',
+    state: '',
+    contactInfo: '',
+    website: '',
+    description: '',
   });
-  
-  const [errors, setErrors] = useState({});
+  const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  const { register } = useAuth();
+  const { register } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-    
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
+  const {
+    name,
+    email,
+    password,
+    role,
+    phone,
+    instituteName,
+    category,
+    affiliation,
+    address,
+    city,
+    state,
+    contactInfo,
+    website,
+    description,
+  } = formData;
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number must be 10 digits';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    if (formData.role === 'institute') {
-      if (!formData.instituteName.trim()) {
-        newErrors.instituteName = 'Institute name is required';
-      }
-      if (!formData.affiliation.trim()) {
-        newErrors.affiliation = 'Affiliation is required';
-      }
-      if (!formData.description.trim()) {
-        newErrors.description = 'Description is required';
-      }
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async e => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-    
     setLoading(true);
-    
+    setAlert(null);
+
     try {
-      const userData = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        role: formData.role
-      };
-      
-      if (formData.role === 'institute') {
-        userData.instituteData = {
-          name: formData.instituteName,
-          category: formData.category,
-          affiliation: formData.affiliation,
-          address: formData.address,
-          contact: formData.contact,
-          description: formData.description
-        };
-      }
-      
-      await register(userData);
-      navigate('/');
-    } catch (error) {
-      setErrors({ submit: error.response?.data?.message || 'Registration failed' });
+      await register(formData);
+      setAlert({ type: 'success', message: 'Registration successful! Please login.' });
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (err) {
+      setAlert({ type: 'danger', message: err.msg || 'Registration failed' });
     } finally {
       setLoading(false);
     }
@@ -145,209 +65,217 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Create Your Account</h2>
+        <div className="auth-header">
+          <h1>Register with EduList</h1>
+          <p>Create your account</p>
+        </div>
         
-        {errors.submit && <div className="error-message">{errors.submit}</div>}
+        {alert && (
+          <div className={`alert alert-${alert.type}`}>
+            {alert.message}
+          </div>
+        )}
         
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={onSubmit}>
           <div className="form-group">
-            <label htmlFor="name">Full Name *</label>
+            <label htmlFor="role">Register as</label>
+            <select
+              id="role"
+              name="role"
+              value={role}
+              onChange={onChange}
+              required
+            >
+              <option value="user">User</option>
+              <option value="institute">Institute</option>
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="name">Full Name</label>
             <input
               type="text"
               id="name"
               name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={errors.name ? 'error' : ''}
-              placeholder="Enter your full name"
+              value={name}
+              onChange={onChange}
+              required
             />
-            {errors.name && <span className="error-text">{errors.name}</span>}
           </div>
-
+          
           <div className="form-group">
-            <label htmlFor="email">Email Address *</label>
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
               name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={errors.email ? 'error' : ''}
-              placeholder="Enter your email"
+              value={email}
+              onChange={onChange}
+              required
             />
-            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
-
+          
           <div className="form-group">
-            <label htmlFor="phone">Phone Number *</label>
+            <label htmlFor="password">Password</label>
             <input
-              type="tel"
+              type="password"
+              id="password"
+              name="password"
+              value={password}
+              onChange={onChange}
+              required
+              minLength="6"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="phone">Phone Number</label>
+            <input
+              type="text"
               id="phone"
               name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className={errors.phone ? 'error' : ''}
-              placeholder="Enter your phone number"
+              value={phone}
+              onChange={onChange}
             />
-            {errors.phone && <span className="error-text">{errors.phone}</span>}
           </div>
-
-          <div className="form-group">
-            <label htmlFor="role">Account Type *</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-            >
-              <option value="user">Student/Parent</option>
-              <option value="institute">Educational Institute</option>
-            </select>
-          </div>
-
-          {formData.role === 'institute' && (
+          
+          {role === 'institute' && (
             <>
+              <h3 className="section-title">Institute Details</h3>
+              
               <div className="form-group">
-                <label htmlFor="instituteName">Institute Name *</label>
+                <label htmlFor="instituteName">Institute Name</label>
                 <input
                   type="text"
                   id="instituteName"
                   name="instituteName"
-                  value={formData.instituteName}
-                  onChange={handleChange}
-                  className={errors.instituteName ? 'error' : ''}
-                  placeholder="Enter institute name"
+                  value={instituteName}
+                  onChange={onChange}
+                  required
                 />
-                {errors.instituteName && <span className="error-text">{errors.instituteName}</span>}
               </div>
-
+              
               <div className="form-group">
-                <label htmlFor="category">Category *</label>
-                // In the Register component, ensure category values are lowercase
-<select
-  id="category"
-  name="category"
-  value={formData.category}
-  onChange={handleChange}
->
-  <option value="school">School</option>
-  <option value="college">College</option>
-  <option value="university">University</option>
-  <option value="coaching">Coaching Center</option>
-  <option value="preschool">Preschool</option>
-</select>
+                <label htmlFor="category">Category</label>
+                <select
+                  id="category"
+                  name="category"
+                  value={category}
+                  onChange={onChange}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="School">School</option>
+                  <option value="College">College</option>
+                  <option value="University">University</option>
+                  <option value="Coaching Center">Coaching Center</option>
+                  <option value="Preschool">Preschool</option>
+                  <option value="Vocational Training">Vocational Training</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
-
+              
               <div className="form-group">
-                <label htmlFor="affiliation">Affiliation/Board *</label>
+                <label htmlFor="affiliation">Affiliation</label>
                 <input
                   type="text"
                   id="affiliation"
                   name="affiliation"
-                  value={formData.affiliation}
-                  onChange={handleChange}
-                  className={errors.affiliation ? 'error' : ''}
-                  placeholder="e.g., CBSE, ICSE, State Board"
+                  value={affiliation}
+                  onChange={onChange}
                 />
-                {errors.affiliation && <span className="error-text">{errors.affiliation}</span>}
               </div>
-
+              
               <div className="form-group">
-                <label htmlFor="description">Institute Description *</label>
+                <label htmlFor="address">Address</label>
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  value={address}
+                  onChange={onChange}
+                  required
+                />
+              </div>
+              
+              <div className="form-row">
+                <div className="form-col">
+                  <div className="form-group">
+                    <label htmlFor="city">City</label>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={city}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-col">
+                  <div className="form-group">
+                    <label htmlFor="state">State</label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={state}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="contactInfo">Contact Information</label>
+                <input
+                  type="text"
+                  id="contactInfo"
+                  name="contactInfo"
+                  value={contactInfo}
+                  onChange={onChange}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="website">Website</label>
+                <input
+                  type="text"
+                  id="website"
+                  name="website"
+                  value={website}
+                  onChange={onChange}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="description">Description</label>
                 <textarea
                   id="description"
                   name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className={errors.description ? 'error' : ''}
-                  placeholder="Describe your institute"
-                  rows="3"
-                />
-                {errors.description && <span className="error-text">{errors.description}</span>}
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="address.city">City *</label>
-                  <input
-                    type="text"
-                    id="address.city"
-                    name="address.city"
-                    value={formData.address.city}
-                    onChange={handleChange}
-                    placeholder="City"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="address.state">State *</label>
-                  <input
-                    type="text"
-                    id="address.state"
-                    name="address.state"
-                    value={formData.address.state}
-                    onChange={handleChange}
-                    placeholder="State"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="contact.website">Website</label>
-                <input
-                  type="url"
-                  id="contact.website"
-                  name="contact.website"
-                  value={formData.contact.website}
-                  onChange={handleChange}
-                  placeholder="https://example.com"
-                />
+                  value={description}
+                  onChange={onChange}
+                  rows="4"
+                ></textarea>
               </div>
             </>
           )}
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="password">Password *</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={errors.password ? 'error' : ''}
-                placeholder="Enter password"
-              />
-              {errors.password && <span className="error-text">{errors.password}</span>}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password *</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={errors.confirmPassword ? 'error' : ''}
-                placeholder="Confirm password"
-              />
-              {errors.confirmPassword && <span className="error-text">{errors.confirmPassword}</span>}
-            </div>
-          </div>
-
-          <button 
-            type="submit" 
-            className="auth-button"
+          
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading ? 'Loading...' : 'Register'}
           </button>
         </form>
-
+        
         <div className="auth-footer">
           <p>
-            Already have an account? <Link to="/login">Login here</Link>
+            Already have an account? <Link to="/login">Login</Link>
           </p>
         </div>
       </div>

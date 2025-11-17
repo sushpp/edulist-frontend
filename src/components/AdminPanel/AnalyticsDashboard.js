@@ -1,149 +1,175 @@
 import React, { useState, useEffect } from 'react';
-import { adminService } from '../../services/admin';
+import AdminSidebar from './AdminSidebar';
+import api from '../../services/api';
+import './AdminPanel.css';
 
 const AnalyticsDashboard = () => {
-  const [analytics, setAnalytics] = useState({
-    totalUsers: 0,
-    totalInstitutes: 0,
-    pendingInstitutes: 0,
-    totalReviews: 0,
-    totalEnquiries: 0,
-    totalCourses: 0,
-  });
-
-  const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
-  const [timeRange, setTimeRange] = useState('month');
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await adminService.getDashboardAnalytics();
-      const data = response || {};
-
-      // Safe setting of analytics
-      const a = data.analytics || {};
-      setAnalytics({
-        totalUsers: a.totalUsers ?? 0,
-        totalInstitutes: a.totalInstitutes ?? 0,
-        pendingInstitutes: a.pendingInstitutes ?? 0,
-        totalReviews: a.totalReviews ?? 0,
-        totalEnquiries: a.totalEnquiries ?? 0,
-        totalCourses: a.totalCourses ?? 0,
-      });
-
-      // Safe setting of featured institutes
-      setFeaturedInstitutes(Array.isArray(data.featuredInstitutes) ? data.featuredInstitutes : []);
-
-    } catch (err) {
-      console.error('Error fetching analytics:', err);
-      setError('Failed to fetch analytics');
-      setAnalytics({
-        totalUsers: 0,
-        totalInstitutes: 0,
-        pendingInstitutes: 0,
-        totalReviews: 0,
-        totalEnquiries: 0,
-        totalCourses: 0,
-      });
-      setFeaturedInstitutes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchData();
-  }, [timeRange]);
+    const fetchAnalytics = async () => {
+      try {
+        const res = await api.get('/admin/analytics');
+        setAnalytics(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (loading) return <div className="loading">Loading analytics...</div>;
-  if (error) return <div className="error">{error}</div>;
+    fetchAnalytics();
+  }, []);
+
+  if (loading) {
+    return <div className="loading">Loading analytics...</div>;
+  }
+
+  const getPercentage = (value, total) => {
+    return total > 0 ? Math.round((value / total) * 100) : 0;
+  };
 
   return (
-    <div className="analytics-dashboard">
-      <div className="page-header">
-        <h2>Platform Analytics</h2>
-        <div className="time-filter">
-          <select 
-            value={timeRange} 
-            onChange={(e) => setTimeRange(e.target.value)}
-          >
-            <option value="week">Last Week</option>
-            <option value="month">Last Month</option>
-            <option value="quarter">Last Quarter</option>
-            <option value="year">Last Year</option>
-          </select>
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <h1>Analytics Dashboard</h1>
         </div>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-icon">👥</div>
-          <div className="metric-content">
-            <h3>{analytics?.totalUsers ?? 0}</h3>
-            <p>Total Users</p>
+        
+        <div className="analytics-overview">
+          <div className="analytics-card">
+            <h3>Institute Statistics</h3>
+            <div className="stats-grid">
+              <div className="stat-item">
+                <div className="stat-label">Total Institutes</div>
+                <div className="stat-value">{analytics?.totalInstitutes || 0}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-label">Approved</div>
+                <div className="stat-value">{analytics?.approvedInstitutes || 0}</div>
+                <div className="stat-percentage">
+                  {getPercentage(analytics?.approvedInstitutes, analytics?.totalInstitutes)}%
+                </div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-label">Pending</div>
+                <div className="stat-value">{analytics?.pendingInstitutes || 0}</div>
+                <div className="stat-percentage">
+                  {getPercentage(analytics?.pendingInstitutes, analytics?.totalInstitutes)}%
+                </div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-label">Rejected</div>
+                <div className="stat-value">{analytics?.rejectedInstitutes || 0}</div>
+                <div className="stat-percentage">
+                  {getPercentage(analytics?.rejectedInstitutes, analytics?.totalInstitutes)}%
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="analytics-card">
+            <h3>User Statistics</h3>
+            <div className="stats-grid">
+              <div className="stat-item">
+                <div className="stat-label">Total Users</div>
+                <div className="stat-value">{analytics?.totalUsers || 0}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="analytics-card">
+            <h3>Review Statistics</h3>
+            <div className="stats-grid">
+              <div className="stat-item">
+                <div className="stat-label">Total Reviews</div>
+                <div className="stat-value">{analytics?.totalReviews || 0}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-label">Approved</div>
+                <div className="stat-value">{analytics?.approvedReviews || 0}</div>
+                <div className="stat-percentage">
+                  {getPercentage(analytics?.approvedReviews, analytics?.totalReviews)}%
+                </div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-label">Pending</div>
+                <div className="stat-value">{analytics?.pendingReviews || 0}</div>
+                <div className="stat-percentage">
+                  {getPercentage(analytics?.pendingReviews, analytics?.totalReviews)}%
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="analytics-card">
+            <h3>Enquiry Statistics</h3>
+            <div className="stats-grid">
+              <div className="stat-item">
+                <div className="stat-label">Total Enquiries</div>
+                <div className="stat-value">{analytics?.totalEnquiries || 0}</div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="metric-card">
-          <div className="metric-icon">🏫</div>
-          <div className="metric-content">
-            <h3>{analytics?.totalInstitutes ?? 0}</h3>
-            <p>Approved Institutes</p>
+        
+        <div className="charts-section">
+          <div className="chart-card">
+            <h3>Institute Status Distribution</h3>
+            <div className="chart-content">
+              <div className="pie-chart">
+                <div className="pie-segment approved" style={{ 
+                  width: `${getPercentage(analytics?.approvedInstitutes, analytics?.totalInstitutes)}%` 
+                }}></div>
+                <div className="pie-segment pending" style={{ 
+                  width: `${getPercentage(analytics?.pendingInstitutes, analytics?.totalInstitutes)}%` 
+                }}></div>
+                <div className="pie-segment rejected" style={{ 
+                  width: `${getPercentage(analytics?.rejectedInstitutes, analytics?.totalInstitutes)}%` 
+                }}></div>
+              </div>
+              <div className="chart-legend">
+                <div className="legend-item">
+                  <div className="legend-color approved"></div>
+                  <span>Approved ({analytics?.approvedInstitutes})</span>
+                </div>
+                <div className="legend-item">
+                  <div className="legend-color pending"></div>
+                  <span>Pending ({analytics?.pendingInstitutes})</span>
+                </div>
+                <div className="legend-item">
+                  <div className="legend-color rejected"></div>
+                  <span>Rejected ({analytics?.rejectedInstitutes})</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="chart-card">
+            <h3>Platform Metrics</h3>
+            <div className="metrics-grid">
+              <div className="metric-item">
+                <div className="metric-value">{analytics?.totalInstitutes || 0}</div>
+                <div className="metric-label">Total Institutes</div>
+              </div>
+              <div className="metric-item">
+                <div className="metric-value">{analytics?.totalUsers || 0}</div>
+                <div className="metric-label">Total Users</div>
+              </div>
+              <div className="metric-item">
+                <div className="metric-value">{analytics?.totalReviews || 0}</div>
+                <div className="metric-label">Total Reviews</div>
+              </div>
+              <div className="metric-item">
+                <div className="metric-value">{analytics?.totalEnquiries || 0}</div>
+                <div className="metric-label">Total Enquiries</div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="metric-card">
-          <div className="metric-icon">⏳</div>
-          <div className="metric-content">
-            <h3>{analytics?.pendingInstitutes ?? 0}</h3>
-            <p>Pending Approvals</p>
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-icon">⭐</div>
-          <div className="metric-content">
-            <h3>{analytics?.totalReviews ?? 0}</h3>
-            <p>Total Reviews</p>
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-icon">📧</div>
-          <div className="metric-content">
-            <h3>{analytics?.totalEnquiries ?? 0}</h3>
-            <p>Total Enquiries</p>
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-icon">📚</div>
-          <div className="metric-content">
-            <h3>{analytics?.totalCourses ?? 0}</h3>
-            <p>Total Courses</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Featured Institutes */}
-      <div className="featured-institutes">
-        <h3>Featured Institutes</h3>
-        {featuredInstitutes.length === 0 ? (
-          <p>No featured institutes available</p>
-        ) : (
-          <ul>
-            {featuredInstitutes.map(inst => (
-              <li key={inst?._id || inst?.id}>
-                {inst?.name ?? 'Unnamed Institute'} ({inst?.category ?? 'No category'})
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );

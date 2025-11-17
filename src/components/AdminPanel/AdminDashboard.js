@@ -1,201 +1,184 @@
-// src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { adminService } from '../../services/admin';
+import { Link } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import './AdminPanel.css';
 
 const AdminDashboard = () => {
-  // --- STATE INITIALIZATION ---
-  // State is initialized with safe, non-null, non-undefined defaults.
-  const [analytics, setAnalytics] = useState({
-    totalUsers: 0,
-    totalInstitutes: 0,
-    pendingInstitutes: 0,
-    totalReviews: 0,
-  });
-
-  const [featuredInstitutes, setFeaturedInstitutes] = useState([]);
-  const [recentActivities, setRecentActivities] = useState({
-    newUsers: [],
-    pendingInstitutes: [],
-    recentReviews: [],
-  });
-
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchDashboardData();
+    const fetchAnalytics = async () => {
+      try {
+        const res = await api.get('/admin/analytics');
+        setAnalytics(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
   }, []);
 
-  // -------------------------------------------------------
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      const response = await adminService.getDashboardAnalytics();
-
-      // --- CRITICAL DEBUGGING ---
-      // This log will show you EXACTLY what the service returned.
-      console.log('✅ Service returned:', response);
-
-      // --- ULTIMATE SAFETY CHECKS ---
-      // Even though the service should be safe, we double-check here.
-      // This makes the component independent and impossible to crash from bad data.
-      const safeAnalytics = (response && typeof response === 'object' && response.analytics) ? response.analytics : {};
-      const safeFeatured = (response && Array.isArray(response.featuredInstitutes)) ? response.featuredInstitutes : [];
-      const safeActivities = (response && typeof response === 'object' && response.recentActivities) ? response.recentActivities : {};
-
-      // --- ATOMIC STATE UPDATES ---
-      // Set all state in a single, atomic update to prevent race conditions
-      const newState = {
-        analytics: {
-          totalUsers: safeAnalytics.totalUsers ?? 0,
-          totalInstitutes: safeAnalytics.totalInstitutes ?? 0,
-          pendingInstitutes: safeAnalytics.pendingInstitutes ?? 0,
-          totalReviews: safeAnalytics.totalReviews ?? 0,
-        },
-        featuredInstitutes: safeFeatured,
-        recentActivities: {
-          newUsers: Array.isArray(safeActivities.newUsers) ? safeActivities.newUsers : [],
-          pendingInstitutes: Array.isArray(safeActivities.pendingInstitutes) ? safeActivities.pendingInstitutes : [],
-          recentReviews: Array.isArray(safeActivities.recentReviews) ? safeActivities.recentReviews : [],
-        },
-      };
-
-      setAnalytics(newState.analytics);
-      setFeaturedInstitutes(newState.featuredInstitutes);
-      setRecentActivities(newState.recentActivities);
-
-    } catch (error) {
-      console.error('❌ A critical error occurred in fetchDashboardData:', error);
-      
-      // In case of a total failure, reset to empty state
-      const failureState = {
-        analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0 },
-        featuredInstitutes: [],
-        recentActivities: { newUsers: [], pendingInstitutes: [], recentReviews: [] },
-      };
-      
-      setAnalytics(failureState.analytics);
-      setFeaturedInstitutes(failureState.featuredInstitutes);
-      setRecentActivities(failureState.recentActivities);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  if (loading) return <div className="loading">Loading dashboard...</div>;
+  if (loading) {
+    return <div className="loading">Loading dashboard...</div>;
+  }
 
   return (
-    <div className="dashboard-container">
-      <AdminSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onLogout={handleLogout}
-      />
-
-      <div className="dashboard-main">
-        <header className="dashboard-header">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      
+      <div className="dashboard-content">
+        <div className="dashboard-header">
           <h1>Admin Dashboard</h1>
           <div className="user-info">
-            <span>Welcome, {user?.name || 'Admin'}</span>
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
-          </div>
-        </header>
-
-        <div className="dashboard-content">
-          {/* Analytics Cards */}
-          <div className="analytics-grid">
-            <div className="analytics-card">
-              <div className="card-icon users">👥</div>
-              <div className="card-content">
-                <h3>{analytics.totalUsers}</h3>
-                <p>Total Users</p>
-              </div>
+            <div className="user-avatar">
+              A
             </div>
-            <div className="analytics-card">
-              <div className="card-icon institutes">🏫</div>
-              <div className="card-content">
-                <h3>{analytics.totalInstitutes}</h3>
-                <p>Approved Institutes</p>
-              </div>
-            </div>
-            <div className="analytics-card">
-              <div className="card-icon pending">⏳</div>
-              <div className="card-content">
-                <h3>{analytics.pendingInstitutes}</h3>
-                <p>Pending Institutes</p>
-              </div>
-            </div>
-            <div className="analytics-card">
-              <div className="card-icon reviews">⭐</div>
-              <div className="card-content">
-                <h3>{analytics.totalReviews}</h3>
-                <p>Total Reviews</p>
-              </div>
+            <div className="user-name">
+              <div>Admin</div>
+              <div className="user-role">Administrator</div>
             </div>
           </div>
-
-          {/* Featured Institutes Section */}
-          <div className="featured-section">
-            <h3>Featured Institutes</h3>
-            <div className="featured-grid">
-              {/* ULTIMATE SAFETY CHECK */}
-              {/* We check the array type RIGHT HERE, before any other logic */}
-              {Array.isArray(featuredInstitutes) && featuredInstitutes.map((institute) => (
-                <div key={institute._id || institute.id || Math.random().toString(36).substr(2, 9)} className="featured-card">
-                  <h4>{institute.name || 'Unnamed Institute'}</h4>
-                  <p>{institute.location || 'No location'}</p>
+        </div>
+        
+        <div className="dashboard-cards">
+          <div className="dashboard-card primary">
+            <div className="card-icon">
+              <i className="fas fa-university"></i>
+            </div>
+            <h3>Total Institutes</h3>
+            <div className="card-value">{analytics?.totalInstitutes || 0}</div>
+          </div>
+          
+          <div className="dashboard-card success">
+            <div className="card-icon">
+              <i className="fas fa-check-circle"></i>
+            </div>
+            <h3>Approved Institutes</h3>
+            <div className="card-value">{analytics?.approvedInstitutes || 0}</div>
+          </div>
+          
+          <div className="dashboard-card warning">
+            <div className="card-icon">
+              <i className="fas fa-clock"></i>
+            </div>
+            <h3>Pending Institutes</h3>
+            <div className="card-value">{analytics?.pendingInstitutes || 0}</div>
+          </div>
+          
+          <div className="dashboard-card danger">
+            <div className="card-icon">
+              <i className="fas fa-times-circle"></i>
+            </div>
+            <h3>Rejected Institutes</h3>
+            <div className="card-value">{analytics?.rejectedInstitutes || 0}</div>
+          </div>
+          
+          <div className="dashboard-card info">
+            <div className="card-icon">
+              <i className="fas fa-users"></i>
+            </div>
+            <h3>Total Users</h3>
+            <div className="card-value">{analytics?.totalUsers || 0}</div>
+          </div>
+          
+          <div className="dashboard-card primary">
+            <div className="card-icon">
+              <i className="fas fa-star"></i>
+            </div>
+            <h3>Total Reviews</h3>
+            <div className="card-value">{analytics?.totalReviews || 0}</div>
+          </div>
+          
+          <div className="dashboard-card success">
+            <div className="card-icon">
+              <i className="fas fa-comment"></i>
+            </div>
+            <h3>Approved Reviews</h3>
+            <div className="card-value">{analytics?.approvedReviews || 0}</div>
+          </div>
+          
+          <div className="dashboard-card warning">
+            <div className="card-icon">
+              <i className="fas fa-envelope"></i>
+            </div>
+            <h3>Total Enquiries</h3>
+            <div className="card-value">{analytics?.totalEnquiries || 0}</div>
+          </div>
+        </div>
+        
+        <div className="dashboard-sections">
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2>Quick Actions</h2>
+            </div>
+            <div className="quick-actions">
+              <Link to="/admin/institutes" className="action-card">
+                <div className="action-icon">
+                  <i className="fas fa-university"></i>
                 </div>
-              ))}
+                <h3>Manage Institutes</h3>
+                <p>Approve or reject institute registrations</p>
+              </Link>
+              
+              <Link to="/admin/users" className="action-card">
+                <div className="action-icon">
+                  <i className="fas fa-users"></i>
+                </div>
+                <h3>Manage Users</h3>
+                <p>View and manage user accounts</p>
+              </Link>
+              
+              <Link to="/admin/analytics" className="action-card">
+                <div className="action-icon">
+                  <i className="fas fa-chart-bar"></i>
+                </div>
+                <h3>View Analytics</h3>
+                <p>Detailed platform analytics and insights</p>
+              </Link>
             </div>
-            {featuredInstitutes.length === 0 && <p>No featured institutes found.</p>}
           </div>
-
-          {/* Recent Activities */}
-          {['newUsers', 'pendingInstitutes', 'recentReviews'].map((key) => (
-            <div key={key} className="activity-section">
-              <h3>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</h3>
-              <div className="activity-list">
-                {recentActivities[key].map((item) => (
-                  <div key={item._id || Math.random()} className="activity-item">
-                    <div className="activity-avatar">
-                      {item.name?.charAt(0) || item.user?.name?.charAt(0) || 'U'}
-                    </div>
-                    <div className="activity-details">
-                      {key === 'newUsers' && (
-                        <>
-                          <p><strong>{item.name}</strong> registered</p>
-                          <small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</small>
-                        </>
-                      )}
-                      {key === 'pendingInstitutes' && (
-                        <p><strong>{item.name}</strong> waiting approval</p>
-                      )}
-                      {key === 'recentReviews' && (
-                        <>
-                          <p><strong>{item.user?.name}</strong> reviewed <strong>{item.institute?.name}</strong></p>
-                          <div>{'⭐'.repeat(item.rating ?? 0)}</div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {recentActivities[key].length === 0 && <p>No {key.replace(/([A-Z])/g, ' ').toLowerCase()}.</p>}
+          
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2>System Overview</h2>
             </div>
-          ))}
+            <div className="overview-stats">
+              <div className="stat-item">
+                <h4>Institute Approval Rate</h4>
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ 
+                      width: `${analytics?.totalInstitutes > 0 ? (analytics?.approvedInstitutes / analytics?.totalInstitutes) * 100 : 0}%` 
+                    }}
+                  ></div>
+                </div>
+                <span className="stat-value">
+                  {analytics?.totalInstitutes > 0 ? Math.round((analytics?.approvedInstitutes / analytics?.totalInstitutes) * 100) : 0}%
+                </span>
+              </div>
+              
+              <div className="stat-item">
+                <h4>Review Approval Rate</h4>
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ 
+                      width: `${analytics?.totalReviews > 0 ? (analytics?.approvedReviews / analytics?.totalReviews) * 100 : 0}%` 
+                    }}
+                  ></div>
+                </div>
+                <span className="stat-value">
+                  {analytics?.totalReviews > 0 ? Math.round((analytics?.approvedReviews / analytics?.totalReviews) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

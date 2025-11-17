@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import './Common.css';
 
 const Footer = () => {
@@ -8,49 +7,41 @@ const Footer = () => {
       <div className="container">
         <div className="footer-content">
           <div className="footer-section">
-            <div className="logo">
-              <span className="logo-icon">🎓</span>
-              <span className="logo-text">EduList</span>
-            </div>
-            <p>Find the perfect educational institute with authentic reviews and comprehensive information.</p>
+            <h3>EduList</h3>
+            <p>Your trusted platform for finding and reviewing educational institutions.</p>
           </div>
-
+          
           <div className="footer-section">
             <h4>Quick Links</h4>
             <ul>
-              <li><Link to="/institutes">Browse Institutes</Link></li>
-              <li><Link to="/register?role=institute">Register Institute</Link></li>
-              <li><Link to="/about">About Us</Link></li>
-              <li><Link to="/contact">Contact</Link></li>
+              <li><a href="/">Home</a></li>
+              <li><a href="/institutes">Institutes</a></li>
+              <li><a href="/about">About Us</a></li>
+              <li><a href="/contact">Contact</a></li>
             </ul>
           </div>
-
+          
           <div className="footer-section">
-            <h4>Categories</h4>
+            <h4>For Institutes</h4>
             <ul>
-              <li><Link to="/institutes?category=school">Schools</Link></li>
-              <li><Link to="/institutes?category=college">Colleges</Link></li>
-              <li><Link to="/institutes?category=university">Universities</Link></li>
-              <li><Link to="/institutes?category=coaching">Coaching Centers</Link></li>
+              <li><a href="/register">Register Your Institute</a></li>
+              <li><a href="/login">Institute Login</a></li>
             </ul>
           </div>
-
+          
           <div className="footer-section">
-            <h4>Contact Info</h4>
-            <ul>
-              <li>📧 support@edulist.com</li>
-              <li>📞 +91 9876543210</li>
-              <li>📍 123 Education Street, Learning City</li>
-            </ul>
+            <h4>Connect With Us</h4>
+            <div className="social-links">
+              <a href="#"><i className="fab fa-facebook-f"></i></a>
+              <a href="#"><i className="fab fa-twitter"></i></a>
+              <a href="#"><i className="fab fa-instagram"></i></a>
+              <a href="#"><i className="fab fa-linkedin-in"></i></a>
+            </div>
           </div>
         </div>
-
+        
         <div className="footer-bottom">
-          <p>&copy; 2024 EduList. All rights reserved.</p>
-          <div className="footer-links">
-            <Link to="/privacy">Privacy Policy</Link>
-            <Link to="/terms">Terms of Service</Link>
-          </div>
+          <p>&copy; {new Date().getFullYear()} EduList. All rights reserved.</p>
         </div>
       </div>
     </footer>

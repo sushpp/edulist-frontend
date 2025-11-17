@@ -1,423 +1,243 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { instituteService } from '../../services/institute';
-import { reviewService } from '../../services/review';
-import { enquiryService } from '../../services/enquiry';
-import { courseService } from '../../services/course';
+import { useParams, Link } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 import ReviewForm from './ReviewForm';
 import EnquiryForm from './EnquiryForm';
-import Loading from '../Common/Loading';
+import api from '../../services/api';
 import './UserPanel.css';
-
-// Use environment variable for API URL
-const API_URL = process.env.REACT_APP_API_URL;
 
 const InstituteDetail = () => {
   const { id } = useParams();
-  const { user } = useAuth();
-
+  const { isAuthenticated, user } = useContext(AuthContext);
   const [institute, setInstitute] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showEnquiryForm, setShowEnquiryForm] = useState(false);
-  const [error, setError] = useState('');
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-// Test the corrected endpoints
-useEffect(() => {
-  const testEndpoints = async () => {
-    // Test institutes endpoint
-    const institutes = await instituteService.getAllInstitutes();
-    console.log('✅ Institutes:', institutes.institutes); // Now properly extracted
-    
-    // Test single institute
-    if (institutes.institutes.length > 0) {
-      const singleInstitute = await instituteService.getInstituteById(institutes.institutes[0]._id);
-      console.log('✅ Single Institute:', singleInstitute);
-    }
-  };
-  testEndpoints();
-}, []);
-
-// In InstituteDetail.js - fix the course fetching
-// In InstituteDetail.js - update the fetchInstituteDetail function
-// This part is already correct in your InstituteDetail.js
-const fetchInstituteDetail = async () => {
-  try {
-    setError('');
-    const response = await instituteService.getAllInstitutes();
-    
-    // FIX: Extract institutes array properly
-    const institutesArray = response.institutes || [];
-    
-    if (Array.isArray(institutesArray)) {
-      const foundInstitute = institutesArray.find(inst => inst._id === id);
-
-      if (foundInstitute) {
-        setInstitute(foundInstitute);
-
-        // FIX: Use the corrected course service method
-        try {
-          const coursesData = await courseService.getInstituteCourses(foundInstitute._id);
-          setCourses(Array.isArray(coursesData) ? coursesData : []);
-        } catch (courseError) {
-          console.log('No courses found or API error');
-          setCourses([]);
-        }
-
-        // Fetch reviews
-        try {
-          const reviewsData = await reviewService.getInstituteReviews(foundInstitute._id);
-          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-        } catch (reviewError) {
-          console.log('No reviews found');
-          setReviews([]);
-        }
-      } else {
-        setError('Institute not found');
+  useEffect(() => {
+    const fetchInstituteData = async () => {
+      try {
+        // Fetch institute details
+        const instituteRes = await api.get(`/institutes/${id}`);
+        setInstitute(instituteRes.data);
+        
+        // Fetch institute reviews
+        const reviewsRes = await api.get(`/reviews/${id}`);
+        setReviews(reviewsRes.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-    } else {
-      console.warn('Expected array of institutes but got:', typeof institutesArray);
-      setError('Invalid data format received');
-    }
-  } catch (error) {
-    console.error('Error fetching institute details:', error);
-    setError('Failed to load institute details');
-  } finally {
-    setLoading(false);
-  }
-};
-  const handleReviewSubmit = async (reviewData) => {
-    try {
-      await reviewService.createReview({ ...reviewData, institute: id });
-      setShowReviewForm(false);
-      fetchInstituteDetail();
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      alert('Error submitting review. Please try again.');
-    }
+    };
+
+    fetchInstituteData();
+  }, [id]);
+
+  const handleReviewSubmit = (reviewData) => {
+    // This will be handled by the ReviewForm component
+    setShowReviewForm(false);
+    // Refresh reviews
+    api.get(`/reviews/${id}`).then(res => setReviews(res.data));
   };
 
-  const handleEnquirySubmit = async (enquiryData) => {
-    try {
-      await enquiryService.createEnquiry({ ...enquiryData, institute: id });
-      setShowEnquiryForm(false);
-      alert('Enquiry submitted successfully!');
-    } catch (error) {
-      console.error('Error submitting enquiry:', error);
-      alert('Error submitting enquiry. Please try again.');
-    }
+  const handleEnquirySubmit = (enquiryData) => {
+    // This will be handled by the EnquiryForm component
+    setShowEnquiryForm(false);
   };
 
-  const getAverageRating = () => {
-    if (!reviews || !Array.isArray(reviews) || reviews.length === 0) return 0;
-    const validReviews = reviews.filter(review => review && typeof review.rating === 'number');
-    if (validReviews.length === 0) return 0;
-    
-    const sum = validReviews.reduce((acc, review) => acc + (review.rating || 0), 0);
-    return (sum / validReviews.length).toFixed(1);
-  };
-
-  // Get all images including primary
-  const getAllImages = () => {
-    if (!institute) return [];
-    return Array.isArray(institute.images) ? institute.images : [];
-  };
-
-  // Get image URL dynamically
-  const getImageUrl = (image) => {
-    if (!image || !image.url) return null;
-    if (image.url.startsWith('http')) return image.url;
-    return `${API_URL}${image.url}`;
-  };
-
-  if (loading) return <Loading message="Loading institute details..." />;
-
-  if (error || !institute) {
-    return (
-      <div className="error-page">
-        <h2>Institute Not Found</h2>
-        <p>{error || 'The institute you are looking for does not exist.'}</p>
-        <a href="/institutes" className="btn btn-primary">Browse Institutes</a>
-      </div>
-    );
+  if (loading) {
+    return <div className="loading">Loading institute details...</div>;
   }
 
-  const allImages = getAllImages();
+  if (!institute) {
+    return <div className="error">Institute not found</div>;
+  }
+
+  // Calculate average rating
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    : 0;
 
   return (
-    <div className="institute-detail">
-      {/* Header Section */}
+    <div className="institute-detail-page">
       <div className="institute-header">
-        <div className="header-background">
-          {allImages.length > 0 ? (
-            <img
-              src={getImageUrl(allImages.find(img => img.isPrimary) || allImages[0])}
-              alt={institute.name}
-              className="header-background-image"
-            />
-          ) : (
-            <div className="header-background-placeholder">
-              {institute.logo ? (
-                <img
-                  src={getImageUrl(institute.logo)}
-                  alt={`${institute.name} Logo`}
-                  className="header-logo-large"
-                />
-              ) : (
-                <span className="header-initial">{institute.name?.charAt(0).toUpperCase() || 'I'}</span>
+        <div className="institute-hero">
+          <div className="institute-logo">
+            {institute.logo ? (
+              <img src={`http://localhost:5000/uploads/${institute.logo}`} alt={institute.name} />
+            ) : (
+              <div className="placeholder-logo">
+                <i className="fas fa-university"></i>
+              </div>
+            )}
+          </div>
+          
+          <div className="institute-title">
+            <h1>{institute.name}</h1>
+            <div className="institute-meta">
+              <span className="badge badge-info">{institute.category}</span>
+              {institute.affiliation && (
+                <span className="badge badge-secondary">{institute.affiliation}</span>
               )}
+              <div className="rating">
+                {[...Array(5)].map((_, i) => (
+                  <i
+                    key={i}
+                    className={`fas fa-star ${i < Math.round(avgRating) ? 'active' : ''}`}
+                  ></i>
+                ))}
+                <span className="rating-text">({reviews.length} reviews)</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="institute-actions">
+            {isAuthenticated && (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowEnquiryForm(true)}
+                >
+                  <i className="fas fa-envelope"></i> Send Enquiry
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowReviewForm(true)}
+                >
+                  <i className="fas fa-star"></i> Write Review
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="institute-content">
+        <div className="institute-main">
+          <div className="content-section">
+            <h2>About</h2>
+            <p>{institute.description || 'No description available.'}</p>
+          </div>
+          
+          <div className="content-section">
+            <h2>Contact Information</h2>
+            <div className="contact-info">
+              <p><i className="fas fa-map-marker-alt"></i> {institute.address}, {institute.city}, {institute.state}</p>
+              <p><i className="fas fa-phone"></i> {institute.contactInfo}</p>
+              {institute.website && (
+                <p><i className="fas fa-globe"></i> <a href={institute.website} target="_blank" rel="noopener noreferrer">{institute.website}</a></p>
+              )}
+            </div>
+          </div>
+          
+          {institute.images && institute.images.length > 0 && (
+            <div className="content-section">
+              <h2>Gallery</h2>
+              <div className="gallery">
+                {institute.images.map((image, index) => (
+                  <div key={index} className="gallery-item">
+                    <img src={`http://localhost:5000/uploads/${image}`} alt={`${institute.name} ${index + 1}`} />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-          <div className="header-overlay"></div>
-        </div>
-
-        <div className="header-content">
-          <div className="institute-basic">
-            {institute.logo && (
-              <img
-                src={getImageUrl(institute.logo)}
-                alt={`${institute.name} Logo`}
-                className="institute-header-logo"
-              />
-            )}
-            <div className="institute-info">
-              <h1>{institute.name || 'Unnamed Institute'}</h1>
-              <div className="institute-meta">
-                <span className="category">{institute.category || 'Unknown Category'}</span>
-                <span className="affiliation">{institute.affiliation || 'No Affiliation'}</span>
-                <div className="rating-section">
-                  <span className="rating">⭐ {getAverageRating()}</span>
-                  <span className="review-count">({reviews.length} reviews)</span>
-                </div>
-              </div>
-              <p className="location">
-                📍 {institute.address?.street || 'Address not available'}, {institute.address?.city || 'Unknown City'}, {institute.address?.state || 'Unknown State'} - {institute.address?.pincode || 'N/A'}
-              </p>
-            </div>
-          </div>
-
-          <div className="header-actions">
-            <button onClick={() => setShowEnquiryForm(true)} className="btn btn-primary">
-              📧 Enquire Now
-            </button>
-            <button onClick={() => setShowReviewForm(true)} className="btn btn-outline" disabled={!user}>
-              ⭐ Write Review
-            </button>
-            {!user && (
-              <small style={{ color: '#e74c3c', display: 'block', marginTop: '5px' }}>
-                Please login to write a review
-              </small>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="detail-tabs">
-        <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
-          Overview
-        </button>
-        <button className={`tab ${activeTab === 'courses' ? 'active' : ''}`} onClick={() => setActiveTab('courses')}>
-          Courses ({courses.length})
-        </button>
-        <button className={`tab ${activeTab === 'facilities' ? 'active' : ''}`} onClick={() => setActiveTab('facilities')}>
-          Facilities ({Array.isArray(institute.facilities) ? institute.facilities.length : 0})
-        </button>
-        <button className={`tab ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => setActiveTab('gallery')}>
-          Gallery ({allImages.length})
-        </button>
-        <button className={`tab ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>
-          Reviews ({reviews.length})
-        </button>
-        <button className={`tab ${activeTab === 'contact' ? 'active' : ''}`} onClick={() => setActiveTab('contact')}>
-          Contact
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="tab-content">
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="overview-tab">
-            <div className="description-section">
-              <h3>About {institute.name}</h3>
-              <p>{institute.description || 'No description available.'}</p>
-            </div>
-            <div className="quick-info">
-              <div className="info-card">
-                <h4>📞 Contact Info</h4>
-                <p><strong>Email:</strong> {institute.contact?.email || 'Not provided'}</p>
-                <p><strong>Phone:</strong> {institute.contact?.phone || 'Not provided'}</p>
-                {institute.contact?.website && (
-                  <p><strong>Website:</strong> <a href={institute.contact.website} target="_blank" rel="noopener noreferrer">{institute.contact.website}</a></p>
-                )}
-              </div>
-              <div className="info-card">
-                <h4>📍 Location</h4>
-                <p>{institute.address?.street || 'Address not specified'}</p>
-                <p>{institute.address?.city || 'Unknown City'}, {institute.address?.state || 'Unknown State'}</p>
-                <p><strong>Pincode:</strong> {institute.address?.pincode || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Courses Tab */}
-        {activeTab === 'courses' && (
-          <div className="courses-tab">
-            <h3>Available Courses</h3>
-            {!courses || courses.length === 0 ? (
-              <div className="empty-state">
-                <p>No courses listed yet. Check back later or contact the institute for course information.</p>
+          
+          <div className="content-section">
+            <h2>Facilities</h2>
+            {institute.facilities && institute.facilities.length > 0 ? (
+              <div className="facilities-list">
+                {institute.facilities.map(facility => (
+                  <div key={facility._id} className="facility-item">
+                    <h4>{facility.name}</h4>
+                    <p>{facility.description}</p>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="courses-grid">
-                {/* FIX: Added array safety check */}
-                {Array.isArray(courses) && courses.map(course => (
-                  <div key={course._id || course.id} className="course-card">
-                    <h4>{course.title || 'Untitled Course'}</h4>
-                    <p className="course-description">{course.description || 'No description available.'}</p>
-                    <div className="course-details">
-                      <div className="detail-item"><strong>Duration:</strong> {course.duration || 'Not specified'}</div>
-                      <div className="detail-item"><strong>Fees:</strong> ₹{course.fees ? course.fees.toLocaleString() : 'Not specified'}</div>
-                      {course.eligibility && <div className="detail-item"><strong>Eligibility:</strong> {course.eligibility}</div>}
-                      {course.category && <div className="detail-item"><strong>Category:</strong> {course.category}</div>}
-                    </div>
-                    {course.facilities && Array.isArray(course.facilities) && course.facilities.length > 0 && (
-                      <div className="course-facilities">
-                        <strong>Facilities:</strong>
-                        <div className="facilities-tags">
-                          {/* FIX: Added array safety check */}
-                          {Array.isArray(course.facilities) && course.facilities.map((facility, idx) => (
-                            <span key={idx} className="facility-tag">{facility}</span>
-                          ))}
+              <p>No facilities information available.</p>
+            )}
+          </div>
+          
+          <div className="content-section">
+            <h2>Courses</h2>
+            {institute.courses && institute.courses.length > 0 ? (
+              <div className="courses-list">
+                {institute.courses.map(course => (
+                  <div key={course._id} className="course-item">
+                    <div className="course-image">
+                      {course.image ? (
+                        <img src={`http://localhost:5000/uploads/${course.image}`} alt={course.title} />
+                      ) : (
+                        <div className="placeholder-image">
+                          <i className="fas fa-book"></i>
                         </div>
+                      )}
+                    </div>
+                    <div className="course-content">
+                      <h4>{course.title}</h4>
+                      <p>{course.description}</p>
+                      <div className="course-meta">
+                        <span><i className="fas fa-clock"></i> {course.duration}</span>
+                        <span><i className="fas fa-money-bill"></i> ${course.fees}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Facilities Tab */}
-        {activeTab === 'facilities' && (
-          <div className="facilities-tab">
-            <h3>Facilities & Infrastructure</h3>
-            {(!institute.facilities || !Array.isArray(institute.facilities) || institute.facilities.length === 0) ? (
-              <div className="empty-state"><p>No facilities information available yet.</p></div>
-            ) : (
-              <div className="facilities-grid">
-                {/* FIX: Added array safety check */}
-                {Array.isArray(institute.facilities) && institute.facilities.map((f, idx) => (
-                  <div key={idx} className="facility-item">
-                    <h4>{f.name || 'Unnamed Facility'}</h4>
-                    {f.description && <p>{f.description}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Gallery Tab */}
-        {activeTab === 'gallery' && (
-          <div className="gallery-tab">
-            <h3>Institute Gallery</h3>
-            {allImages.length === 0 ? (
-              <div className="empty-state">
-                <p>No images available for this institute.</p>
               </div>
             ) : (
-              <div className="gallery-grid">
-                {/* FIX: Added array safety check */}
-                {Array.isArray(allImages) && allImages.map((image, idx) => (
-                  <div key={idx} className="gallery-item">
-                    <img 
-                      src={getImageUrl(image)} 
-                      alt={`${institute.name} Image ${idx + 1}`} 
-                      onClick={() => setSelectedImageIndex(idx)} 
-                    />
-                    {image.type === 'logo' && <div className="image-badge">Logo</div>}
-                    {image.isPrimary && image.type !== 'logo' && <div className="image-badge primary">Primary</div>}
-                  </div>
-                ))}
-              </div>
+              <p>No courses information available.</p>
             )}
           </div>
-        )}
-
-        {/* Reviews Tab */}
-        {activeTab === 'reviews' && (
-          <div className="reviews-tab">
-            <h3>Student & Parent Reviews</h3>
-            <div className="reviews-list">
-              {!reviews || reviews.length === 0 ? (
-                <div className="empty-state">
-                  <p>No reviews yet. Be the first to review this institute!</p>
-                  {user && <button onClick={() => setShowReviewForm(true)} className="btn btn-primary">Write First Review</button>}
-                </div>
-              ) : (
-                // FIX: Added array safety check
-                Array.isArray(reviews) && reviews.map(review => (
-                  <div key={review._id || review.id} className="review-card">
+          
+          <div className="content-section">
+            <h2>Reviews</h2>
+            {reviews.length > 0 ? (
+              <div className="reviews-list">
+                {reviews.map(review => (
+                  <div key={review._id} className="review-item">
                     <div className="review-header">
-                      <div className="reviewer-info">
-                        <div className="reviewer-avatar">
-                          {review.user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </div>
-                        <div>
-                          <strong>{review.user?.name || 'Anonymous'}</strong>
-                          <div className="review-rating">
-                            {'⭐'.repeat(review.rating || 0)}
-                          </div>
-                        </div>
+                      <h4>{review.userId?.name}</h4>
+                      <div className="rating">
+                        {[...Array(5)].map((_, i) => (
+                          <i
+                            key={i}
+                            className={`fas fa-star ${i < review.rating ? 'active' : ''}`}
+                          ></i>
+                        ))}
                       </div>
-                      <span className="review-date">
-                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Unknown date'}
-                      </span>
                     </div>
-                    <p className="review-text">{review.reviewText || 'No review text provided.'}</p>
+                    <p>{review.reviewText}</p>
+                    <div className="review-date">
+                      {new Date(review.date).toLocaleDateString()}
+                    </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p>No reviews yet. Be the first to review!</p>
+            )}
           </div>
-        )}
-
-        {/* Contact Tab */}
-        {activeTab === 'contact' && (
-          <div className="contact-tab">
-            <h3>Contact Information</h3>
-            <div className="contact-details">
-              <div className="contact-info"><h4>📞 Phone</h4><p>{institute.contact?.phone || 'Not provided'}</p></div>
-              <div className="contact-info"><h4>📧 Email</h4><p>{institute.contact?.email || 'Not provided'}</p></div>
-              {institute.contact?.website && <div className="contact-info"><h4>🌐 Website</h4><p><a href={institute.contact.website} target="_blank" rel="noopener noreferrer">{institute.contact.website}</a></p></div>}
-              <div className="contact-info"><h4>📍 Address</h4><p>{institute.address?.street || 'Address not specified'}</p><p>{institute.address?.city || 'Unknown City'}, {institute.address?.state || 'Unknown State'}</p><p><strong>Pincode:</strong> {institute.address?.pincode || 'N/A'}</p></div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
-
-      {/* Modals */}
+      
       {showReviewForm && (
-        <ReviewForm 
-          institute={institute} 
-          onSubmit={handleReviewSubmit} 
-          onClose={() => setShowReviewForm(false)} 
+        <ReviewForm
+          instituteId={id}
+          instituteName={institute.name}
+          onClose={() => setShowReviewForm(false)}
+          onSubmit={handleReviewSubmit}
         />
       )}
+      
       {showEnquiryForm && (
-        <EnquiryForm 
-          institute={institute} 
-          onSubmit={handleEnquirySubmit} 
-          onClose={() => setShowEnquiryForm(false)} 
+        <EnquiryForm
+          instituteId={id}
+          instituteName={institute.name}
+          onClose={() => setShowEnquiryForm(false)}
+          onSubmit={handleEnquirySubmit}
         />
       )}
     </div>

@@ -1,100 +1,83 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
+import './UserPanel.css';
 
-const EnquiryForm = ({ institute, onSubmit, onClose }) => {
-  const { user } = useAuth();
+const EnquiryForm = ({ instituteId, instituteName, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '',
-    message: ''
+    message: '',
   });
+  const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const { message } = formData;
+
+  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
+    setAlert(null);
+
     try {
-      await onSubmit(formData);
+      await api.post('/enquiries', {
+        instituteId,
+        message,
+      });
+      
+      setAlert({ type: 'success', message: 'Enquiry sent successfully!' });
+      onSubmit(formData);
+    } catch (err) {
+      setAlert({ type: 'danger', message: err.response?.data?.msg || 'Failed to send enquiry' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
   return (
-    <div className="modal-overlay">
+    <div className="modal">
       <div className="modal-content">
         <div className="modal-header">
-          <h3>Enquire about {institute.name}</h3>
-          <button onClick={onClose} className="close-button">×</button>
+          <h2>Send Enquiry to {instituteName}</h2>
+          <button className="modal-close" onClick={onClose}>
+            <i className="fas fa-times"></i>
+          </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="enquiry-form">
-          <div className="form-group">
-            <label htmlFor="name">Full Name *</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email Address *</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone">Phone Number *</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="message">Your Message *</label>
-            <textarea
-              id="message"
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              placeholder="What would you like to know about this institute?"
-              rows="4"
-              required
-            />
-          </div>
-
-          <div className="form-actions">
-            <button type="button" onClick={onClose} className="btn btn-outline">
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Sending...' : 'Send Enquiry'}
-            </button>
-          </div>
-        </form>
+        
+        <div className="modal-body">
+          {alert && (
+            <div className={`alert alert-${alert.type}`}>
+              {alert.message}
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="message">Your Message</label>
+              <textarea
+                id="message"
+                name="message"
+                value={message}
+                onChange={onChange}
+                rows="5"
+                placeholder="Ask any questions you have about this institute..."
+                required
+              ></textarea>
+            </div>
+            
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send Enquiry'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

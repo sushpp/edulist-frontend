@@ -1,94 +1,80 @@
 import React, { useState, useEffect } from 'react';
-import { enquiryService } from '../../services/enquiry';
+import InstituteSidebar from './InstituteSidebar';
+import api from '../../services/api';
+import './InstituteDashboard.css';
 
 const Enquiries = () => {
   const [enquiries, setEnquiries] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
-  const [responseText, setResponseText] = useState('');
+  const [alert, setAlert] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const fetchEnquiries = async () => {
+      try {
+        const res = await api.get('/enquiries');
+        setEnquiries(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     fetchEnquiries();
   }, []);
 
-  const fetchEnquiries = async () => {
+  const handleStatusUpdate = async (id, status) => {
+    setLoading(true);
+    setAlert(null);
+
     try {
-      const data = await enquiryService.getInstituteEnquiries();
-      // FIX: Ensure enquiries is always an array with multiple fallbacks
-      const enquiriesData = Array.isArray(data) ? data : 
-                           data?.enquiries ? data.enquiries : 
-                           data?.data ? data.data : [];
-      setEnquiries(enquiriesData);
-    } catch (error) {
-      console.error('Error fetching enquiries:', error);
-      // FIX: Set empty array on error to prevent crashes
-      setEnquiries([]);
+      const res = await api.put(`/enquiries/${id}`, { status });
+      setEnquiries(enquiries.map(enquiry => 
+        enquiry._id === id ? res.data : enquiry
+      ));
+      setAlert({ type: 'success', message: 'Enquiry status updated successfully!' });
+    } catch (err) {
+      setAlert({ type: 'danger', message: 'Failed to update enquiry status' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (enquiryId, status) => {
-    try {
-      await enquiryService.updateEnquiryStatus(enquiryId, status);
-      fetchEnquiries(); // Refresh list
-    } catch (error) {
-      console.error('Error updating enquiry status:', error);
-      alert('Error updating enquiry status');
-    }
+  const viewEnquiry = (enquiry) => {
+    setSelectedEnquiry(enquiry);
   };
 
-  const handleRespond = async (enquiryId) => {
-    if (!responseText.trim()) return;
-
-    try {
-      await enquiryService.respondToEnquiry(enquiryId, responseText);
-      setSelectedEnquiry(null);
-      setResponseText('');
-      fetchEnquiries(); // Refresh list
-      alert('Response sent successfully!');
-    } catch (error) {
-      console.error('Error sending response:', error);
-      alert('Error sending response');
-    }
+  const closeEnquiry = () => {
+    setSelectedEnquiry(null);
   };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      new: { class: 'new', label: 'New' },
-      contacted: { class: 'contacted', label: 'Contacted' },
-      resolved: { class: 'resolved', label: 'Resolved' }
-    };
-    
-    const config = statusConfig[status] || statusConfig.new;
-    return <span className={`status-badge ${config.class}`}>{config.label}</span>;
-  };
-
-  if (loading) {
-    return <div className="loading">Loading enquiries...</div>;
-  }
 
   return (
-    <div className="enquiries-management">
-      <div className="page-header">
-        <h2>Student Enquiries</h2>
-        <p>Manage and respond to student and parent enquiries</p>
-      </div>
-
-      {/* Enquiries List */}
-      <div className="enquiries-list">
-        {/* FIX: Enhanced empty state check */}
-        {!enquiries || enquiries.length === 0 ? (
-          <div className="empty-state">
-            <p>No enquiries received yet</p>
+    <div className="dashboard-layout">
+      <InstituteSidebar />
+      
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <h1>Enquiries</h1>
+          <div className="table-actions">
+            <span>{enquiries.length} total enquiries</span>
           </div>
-        ) : (
-          <div className="enquiries-table">
-            <table>
+        </div>
+        
+        {alert && (
+          <div className={`alert alert-${alert.type}`}>
+            {alert.message}
+          </div>
+        )}
+        
+        <div className="table-container">
+          <div className="table-header">
+            <h2>All Enquiries</h2>
+          </div>
+          
+          {enquiries.length > 0 ? (
+            <table className="table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Contact</th>
+                  <th>User</th>
                   <th>Message</th>
                   <th>Date</th>
                   <th>Status</th>
@@ -96,47 +82,51 @@ const Enquiries = () => {
                 </tr>
               </thead>
               <tbody>
-                {/* FIX: Added array safety check before mapping */}
-                {Array.isArray(enquiries) && enquiries.map(enquiry => (
-                  <tr key={enquiry._id || enquiry.id}>
+                {enquiries.map(enquiry => (
+                  <tr key={enquiry._id}>
                     <td>
                       <div className="user-info">
-                        <strong>{enquiry.name || 'Unknown'}</strong>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="contact-info">
-                        <div>{enquiry.email || 'No email'}</div>
-                        <div>{enquiry.phone || 'No phone'}</div>
+                        <strong>{enquiry.userId?.name}</strong>
+                        <div>{enquiry.userId?.email}</div>
+                        <div>{enquiry.userId?.phone}</div>
                       </div>
                     </td>
                     <td>
                       <div className="message-preview">
-                        {/* FIX: Added safety check for message */}
-                        {enquiry.message ? `${enquiry.message.substring(0, 50)}...` : 'No message'}
+                        {enquiry.message.substring(0, 100)}
+                        {enquiry.message.length > 100 && '...'}
                       </div>
                     </td>
+                    <td>{new Date(enquiry.date).toLocaleDateString()}</td>
                     <td>
-                      {/* FIX: Added safety check for date */}
-                      {enquiry.createdAt ? new Date(enquiry.createdAt).toLocaleDateString() : 'Unknown date'}
+                      <span className={`status-badge ${enquiry.status}`}>
+                        {enquiry.status}
+                      </span>
                     </td>
                     <td>
-                      {getStatusBadge(enquiry.status)}
-                    </td>
-                    <td>
-                      <div className="enquiry-actions">
-                        <button
-                          onClick={() => setSelectedEnquiry(enquiry)}
+                      <div className="table-actions">
+                        <button 
                           className="btn btn-sm btn-primary"
+                          onClick={() => viewEnquiry(enquiry)}
                         >
-                          View & Respond
+                          <i className="fas fa-eye"></i>
                         </button>
-                        {enquiry.status === 'new' && (
-                          <button
-                            onClick={() => handleStatusUpdate(enquiry._id, 'contacted')}
-                            className="btn btn-sm btn-outline"
+                        {enquiry.status === 'pending' && (
+                          <button 
+                            className="btn btn-sm btn-success"
+                            onClick={() => handleStatusUpdate(enquiry._id, 'responded')}
+                            disabled={loading}
                           >
-                            Mark Contacted
+                            <i className="fas fa-check"></i>
+                          </button>
+                        )}
+                        {enquiry.status !== 'closed' && (
+                          <button 
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => handleStatusUpdate(enquiry._id, 'closed')}
+                            disabled={loading}
+                          >
+                            <i className="fas fa-times"></i>
                           </button>
                         )}
                       </div>
@@ -145,77 +135,85 @@ const Enquiries = () => {
                 ))}
               </tbody>
             </table>
+          ) : (
+            <div className="no-data">
+              <h3>No enquiries yet</h3>
+              <p>Enquiries from users will appear here</p>
+            </div>
+          )}
+        </div>
+        
+        {selectedEnquiry && (
+          <div className="modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Enquiry Details</h2>
+                <button className="modal-close" onClick={closeEnquiry}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="enquiry-details">
+                  <div className="detail-section">
+                    <h3>User Information</h3>
+                    <p><strong>Name:</strong> {selectedEnquiry.userId?.name}</p>
+                    <p><strong>Email:</strong> {selectedEnquiry.userId?.email}</p>
+                    <p><strong>Phone:</strong> {selectedEnquiry.userId?.phone}</p>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Message</h3>
+                    <p>{selectedEnquiry.message}</p>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Status</h3>
+                    <span className={`status-badge ${selectedEnquiry.status}`}>
+                      {selectedEnquiry.status}
+                    </span>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Date</h3>
+                    <p>{new Date(selectedEnquiry.date).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                {selectedEnquiry.status === 'pending' && (
+                  <button 
+                    className="btn btn-success"
+                    onClick={() => {
+                      handleStatusUpdate(selectedEnquiry._id, 'responded');
+                      closeEnquiry();
+                    }}
+                    disabled={loading}
+                  >
+                    Mark as Responded
+                  </button>
+                )}
+                {selectedEnquiry.status !== 'closed' && (
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      handleStatusUpdate(selectedEnquiry._id, 'closed');
+                      closeEnquiry();
+                    }}
+                    disabled={loading}
+                  >
+                    Close Enquiry
+                  </button>
+                )}
+                <button className="btn btn-primary" onClick={closeEnquiry}>
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Response Modal */}
-      {selectedEnquiry && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Respond to Enquiry</h3>
-              <button 
-                onClick={() => {
-                  setSelectedEnquiry(null);
-                  setResponseText('');
-                }}
-                className="close-button"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="enquiry-details">
-              <div className="detail-section">
-                <h4>Enquiry Details</h4>
-                <p><strong>From:</strong> {selectedEnquiry.name || 'Unknown'}</p>
-                <p><strong>Email:</strong> {selectedEnquiry.email || 'No email'}</p>
-                <p><strong>Phone:</strong> {selectedEnquiry.phone || 'No phone'}</p>
-                <p><strong>Message:</strong> {selectedEnquiry.message || 'No message'}</p>
-                <p><strong>Received:</strong> {selectedEnquiry.createdAt ? new Date(selectedEnquiry.createdAt).toLocaleString() : 'Unknown date'}</p>
-              </div>
-
-              {/* FIX: Added safety check for response */}
-              {selectedEnquiry.response && (
-                <div className="detail-section">
-                  <h4>Previous Response</h4>
-                  <p>{selectedEnquiry.response}</p>
-                </div>
-              )}
-
-              <div className="response-section">
-                <h4>Your Response</h4>
-                <textarea
-                  value={responseText}
-                  onChange={(e) => setResponseText(e.target.value)}
-                  placeholder="Type your response here..."
-                  rows="6"
-                />
-              </div>
-
-              <div className="form-actions">
-                <button
-                  onClick={() => {
-                    setSelectedEnquiry(null);
-                    setResponseText('');
-                  }}
-                  className="btn btn-outline"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleRespond(selectedEnquiry._id)}
-                  className="btn btn-primary"
-                  disabled={!responseText.trim()}
-                >
-                  Send Response
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

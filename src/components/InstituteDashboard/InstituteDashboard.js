@@ -1,130 +1,155 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 import InstituteSidebar from './InstituteSidebar';
-import ProfileManagement from './ProfileManagement';
-import CourseManagement from './CourseManagement';
-import FacilitiesManagement from './FacilitiesManagement';
-import Enquiries from './Enquiries';
-import Reviews from './Reviews';
+import api from '../../services/api';
 import './InstituteDashboard.css';
 
-// FIX: Add error boundary for child components
-const DashboardErrorBoundary = ({ children }) => {
-  const [hasError, setHasError] = useState(false);
+const InstituteDashboard = () => {
+  const { user } = useContext(AuthContext);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleError = (error) => {
-      console.error('💥 Dashboard Error Boundary Caught:', error);
-      setHasError(true);
+    const fetchDashboardData = async () => {
+      try {
+        const res = await api.get('/institutes/dashboard/me');
+        setDashboardData(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
+    fetchDashboardData();
   }, []);
 
-  if (hasError) {
-    return (
-      <div className="error-boundary">
-        <h2>Something went wrong</h2>
-        <p>There was an error loading this section. Please try refreshing the page.</p>
-        <button onClick={() => window.location.reload()} className="btn btn-primary">
-          Reload Page
-        </button>
-      </div>
-    );
+  if (loading) {
+    return <div className="loading">Loading dashboard...</div>;
   }
 
-  return children;
-};
-
-const InstituteDashboard = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    // Redirect to profile if on base dashboard path
-    if (location.pathname === '/institute/dashboard') {
-      navigate('/institute/dashboard/profile');
-    }
-  }, [location, navigate]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
   return (
-    <div className="dashboard-container">
-      <InstituteSidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)}
-        onLogout={handleLogout}
-      />
+    <div className="dashboard-layout">
+      <InstituteSidebar />
       
-      <div className="dashboard-main">
-        <header className="dashboard-header">
-          <button 
-            className="menu-toggle"
-            onClick={() => setSidebarOpen(true)}
-          >
-            ☰
-          </button>
-          <h1>Institute Dashboard</h1>
-          <div className="user-info">
-            <span>Welcome, {user?.name}</span>
-            <button onClick={handleLogout} className="logout-btn">
-              Logout
-            </button>
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <div>
+            <h1>Welcome, {user?.name}!</h1>
+            <p>{dashboardData?.institute?.name}</p>
           </div>
-        </header>
-
-        <div className="dashboard-content">
-          {/* FIX: Wrap each route with error boundary */}
-          <Routes>
-            <Route 
-              path="profile" 
-              element={
-                <DashboardErrorBoundary>
-                  <ProfileManagement />
-                </DashboardErrorBoundary>
-              } 
-            />
-            <Route 
-              path="courses" 
-              element={
-                <DashboardErrorBoundary>
-                  <CourseManagement />
-                </DashboardErrorBoundary>
-              } 
-            />
-            <Route 
-              path="facilities" 
-              element={
-                <DashboardErrorBoundary>
-                  <FacilitiesManagement />
-                </DashboardErrorBoundary>
-              } 
-            />
-            <Route 
-              path="enquiries" 
-              element={
-                <DashboardErrorBoundary>
-                  <Enquiries />
-                </DashboardErrorBoundary>
-              } 
-            />
-            <Route 
-              path="reviews" 
-              element={
-                <DashboardErrorBoundary>
-                  <Reviews />
-                </DashboardErrorBoundary>
-              } 
-            />
-          </Routes>
+          <div className="user-info">
+            <div className="user-avatar">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="user-name">
+              <div>{user?.name}</div>
+              <div className="user-role">Institute</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="dashboard-cards">
+          <div className="dashboard-card primary">
+            <div className="card-icon">
+              <i className="fas fa-envelope"></i>
+            </div>
+            <h3>Total Enquiries</h3>
+            <div className="card-value">{dashboardData?.totalEnquiries || 0}</div>
+          </div>
+          
+          <div className="dashboard-card success">
+            <div className="card-icon">
+              <i className="fas fa-star"></i>
+            </div>
+            <h3>Total Reviews</h3>
+            <div className="card-value">{dashboardData?.totalReviews || 0}</div>
+          </div>
+          
+          <div className="dashboard-card warning">
+            <div className="card-icon">
+              <i className="fas fa-book"></i>
+            </div>
+            <h3>Total Courses</h3>
+            <div className="card-value">{dashboardData?.institute?.courses?.length || 0}</div>
+          </div>
+          
+          <div className="dashboard-card info">
+            <div className="card-icon">
+              <i className="fas fa-building"></i>
+            </div>
+            <h3>Total Facilities</h3>
+            <div className="card-value">{dashboardData?.institute?.facilities?.length || 0}</div>
+          </div>
+        </div>
+        
+        <div className="dashboard-sections">
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2>Recent Enquiries</h2>
+              <Link to="/institute/enquiries" className="btn btn-sm">View All</Link>
+            </div>
+            <div className="section-content">
+              {dashboardData?.enquiries?.length > 0 ? (
+                <div className="recent-list">
+                  {dashboardData.enquiries.slice(0, 5).map(enquiry => (
+                    <div key={enquiry._id} className="recent-item">
+                      <div className="item-info">
+                        <h4>{enquiry.userId?.name}</h4>
+                        <p>{enquiry.message.substring(0, 100)}...</p>
+                        <span className="date">{new Date(enquiry.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="item-status">
+                        <span className={`status-badge ${enquiry.status}`}>
+                          {enquiry.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No enquiries yet</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2>Recent Reviews</h2>
+              <Link to="/institute/reviews" className="btn btn-sm">View All</Link>
+            </div>
+            <div className="section-content">
+              {dashboardData?.reviews?.length > 0 ? (
+                <div className="recent-list">
+                  {dashboardData.reviews.slice(0, 5).map(review => (
+                    <div key={review._id} className="recent-item">
+                      <div className="item-info">
+                        <h4>{review.userId?.name}</h4>
+                        <div className="rating">
+                          {[...Array(5)].map((_, i) => (
+                            <i
+                              key={i}
+                              className={`fas fa-star ${i < review.rating ? 'active' : ''}`}
+                            ></i>
+                          ))}
+                        </div>
+                        <p>{review.reviewText.substring(0, 100)}...</p>
+                        <span className="date">{new Date(review.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="item-status">
+                        <span className={`status-badge ${review.approvalStatus}`}>
+                          {review.approvalStatus}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No reviews yet</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/Auth/Login.js
+import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
@@ -6,111 +7,104 @@ import './Auth.css';
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
-  const [errors, setErrors] = useState({});
+  const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth(); // Get isAuthenticated and user from context
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    if (errors[e.target.name]) {
-      setErrors({
-        ...errors,
-        [e.target.name]: ''
-      });
-    }
-  };
+  const { email, password } = formData;
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async e => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-    
     setLoading(true);
-    
+    setAlert(null);
+
     try {
-      await login(formData.email, formData.password);
-      navigate('/');
-    } catch (error) {
-      setErrors({ submit: error.response?.data?.message || 'Login failed' });
+      // We don't navigate here yet. We just wait for the context to update.
+      await login(formData);
+      setAlert({ type: 'success', message: 'Login successful!' });
+    } catch (err) {
+      setAlert({ type: 'danger', message: err.msg || 'Login failed' });
     } finally {
       setLoading(false);
     }
   };
 
+  // This effect will run whenever `isAuthenticated` or `user` changes
+  useEffect(() => {
+    console.log('Login useEffect triggered. isAuthenticated:', isAuthenticated, 'user:', user);
+    if (isAuthenticated && user) {
+      console.log('User is authenticated, navigating...');
+      // Navigate based on user role
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (user.role === 'institute') {
+        navigate('/institute/dashboard');
+      } else if (user.role === 'user') {
+        navigate('/user/dashboard');
+      } else {
+        navigate('/'); // Fallback
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
+
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Login to Your Account</h2>
+        <div className="auth-header">
+          <h1>Login to EduList</h1>
+          <p>Sign in to your account</p>
+        </div>
         
-        {errors.submit && <div className="error-message">{errors.submit}</div>}
+        {alert && (
+          <div className={`alert alert-${alert.type}`}>
+            {alert.message}
+          </div>
+        )}
         
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={onSubmit}>
+          {/* ... form inputs remain the same ... */}
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
               name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={errors.email ? 'error' : ''}
-              placeholder="Enter your email"
+              value={email}
+              onChange={onChange}
+              required
             />
-            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
-
+          
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
               name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className={errors.password ? 'error' : ''}
-              placeholder="Enter your password"
+              value={password}
+              onChange={onChange}
+              required
             />
-            {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
-
-          <button 
-            type="submit" 
-            className="auth-button"
+          
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Loading...' : 'Login'}
           </button>
         </form>
-
+        
         <div className="auth-footer">
           <p>
-            Don't have an account? <Link to="/register">Register here</Link>
+            Don't have an account? <Link to="/register">Register</Link>
           </p>
         </div>
       </div>

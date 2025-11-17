@@ -1,50 +1,77 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import './InstituteDashboard.css';
 
-const InstituteSidebar = ({ isOpen, onClose, onLogout }) => {
+const InstituteSidebar = () => {
   const location = useLocation();
 
-  const menuItems = [
-    { path: '/institute/dashboard/profile', icon: '🏫', label: 'Profile' },
-    { path: '/institute/dashboard/courses', icon: '📚', label: 'Courses' },
-    { path: '/institute/dashboard/facilities', icon: '🏢', label: 'Facilities' },
-    { path: '/institute/dashboard/enquiries', icon: '📧', label: 'Enquiries' },
-    { path: '/institute/dashboard/reviews', icon: '⭐', label: 'Reviews' },
-  ];
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
 
   return (
-    <>
-      {/* Overlay for mobile */}
-      {isOpen && <div className="sidebar-overlay" onClick={onClose}></div>}
-      
-      <div className={`institute-sidebar ${isOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <h3>Institute Panel</h3>
-          <button className="close-sidebar" onClick={onClose}>×</button>
-        </div>
-        
-        <nav className="sidebar-nav">
-          {menuItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-        
-        <div className="sidebar-footer">
-          <button onClick={onLogout} className="logout-btn">
-            <span>🚪</span>
-            <span>Logout</span>
-          </button>
-        </div>
+    <div className="sidebar">
+      <div className="logo">
+        <h2>EduList</h2>
       </div>
-    </>
+      
+      <ul>
+        <li>
+          <Link 
+            to="/institute/dashboard" 
+            className={isActive('/institute/dashboard') ? 'active' : ''}
+          >
+            <i className="fas fa-tachometer-alt"></i>
+            Dashboard
+          </Link>
+        </li>
+        <li>
+          <Link 
+            to="/institute/profile" 
+            className={isActive('/institute/profile') ? 'active' : ''}
+          >
+            <i className="fas fa-user"></i>
+            Profile
+          </Link>
+        </li>
+        <li>
+          <Link 
+            to="/institute/courses" 
+            className={isActive('/institute/courses') ? 'active' : ''}
+          >
+            <i className="fas fa-book"></i>
+            Courses
+          </Link>
+        </li>
+        <li>
+          <Link 
+            to="/institute/facilities" 
+            className={isActive('/institute/facilities') ? 'active' : ''}
+          >
+            <i className="fas fa-building"></i>
+            Facilities
+          </Link>
+        </li>
+        <li>
+          <Link 
+            to="/institute/enquiries" 
+            className={isActive('/institute/enquiries') ? 'active' : ''}
+          >
+            <i className="fas fa-envelope"></i>
+            Enquiries
+          </Link>
+        </li>
+        <li>
+          <Link 
+            to="/institute/reviews" 
+            className={isActive('/institute/reviews') ? 'active' : ''}
+          >
+            <i className="fas fa-star"></i>
+            Reviews
+          </Link>
+        </li>
+      </ul>
+    </div>
   );
 };
 

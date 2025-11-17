@@ -1,162 +1,192 @@
 import React, { useState, useEffect } from 'react';
-import { adminService } from '../../services/admin';
+import AdminSidebar from './AdminSidebar';
+import api from '../../services/api';
+import './AdminPanel.css';
 
 const ManageInstitutes = () => {
   const [institutes, setInstitutes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
+  const [filter, setFilter] = useState('all');
+  const [alert, setAlert] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const fetchInstitutes = async () => {
+      try {
+        const res = await api.get('/admin/institutes');
+        setInstitutes(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     fetchInstitutes();
   }, []);
 
-  const fetchInstitutes = async () => {
+  const handleStatusUpdate = async (id, status) => {
+    setLoading(true);
+    setAlert(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const data = await adminService.getPendingInstitutes();
-      
-      // Enhanced safety check with multiple fallbacks
-      const institutesData = Array.isArray(data) ? data : 
-                           data?.institutes ? data.institutes : 
-                           data?.data ? data.data : [];
-      
-      setInstitutes(institutesData);
-    } catch (error) {
-      console.error('Error fetching institutes:', error);
-      setError('Failed to fetch institutes. Please try again later.');
-      // Set empty array on error to prevent crashes
-      setInstitutes([]);
+      const res = await api.put(`/admin/institutes/${id}`, { status });
+      setInstitutes(institutes.map(institute => 
+        institute._id === id ? res.data : institute
+      ));
+      setAlert({ type: 'success', message: `Institute ${status} successfully!` });
+    } catch (err) {
+      setAlert({ type: 'danger', message: 'Failed to update institute status' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (instituteId, status) => {
-    try {
-      // Set loading state for this specific action
-      setActionLoading(prev => ({ ...prev, [instituteId]: true }));
-      
-      await adminService.updateInstituteStatus(instituteId, status);
-      
-      // Filter out the updated institute from the list
-      setInstitutes(prevInstitutes => 
-        Array.isArray(prevInstitutes) 
-          ? prevInstitutes.filter(inst => inst._id !== instituteId)
-          : []
-      );
-      
-      alert(`Institute ${status} successfully`);
-    } catch (error) {
-      console.error('Error updating institute status:', error);
-      alert('Error updating institute status');
-    } finally {
-      // Clear loading state for this action
-      setActionLoading(prev => ({ ...prev, [instituteId]: false }));
-    }
-  };
-
-  // Helper function to safely format dates
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Unknown date';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch (e) {
-      return 'Invalid date';
-    }
-  };
-
-  if (loading) {
-    return <div className="loading">Loading institutes...</div>;
-  }
+  const filteredInstitutes = filter === 'all' 
+    ? institutes 
+    : institutes.filter(institute => institute.verifiedStatus === filter);
 
   return (
-    <div className="manage-institutes">
-      <div className="page-header">
-        <h2>Manage Institutes</h2>
-        <p>Approve or reject institute registration requests</p>
-      </div>
-
-      {error && (
-        <div className="error-message">
-          {error}
-          <button onClick={fetchInstitutes} className="btn btn-primary">Retry</button>
-        </div>
-      )}
-
-      <div className="institutes-list">
-        {/* Enhanced safety check before rendering */}
-        {!institutes || !Array.isArray(institutes) || institutes.length === 0 ? (
-          <div className="empty-state">
-            <p>No institutes pending approval</p>
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <h1>Manage Institutes</h1>
+          <div className="filter-tabs">
+            <button 
+              className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
+              onClick={() => setFilter('all')}
+            >
+              All ({institutes.length})
+            </button>
+            <button 
+              className={`filter-tab ${filter === 'pending' ? 'active' : ''}`}
+              onClick={() => setFilter('pending')}
+            >
+              Pending ({institutes.filter(i => i.verifiedStatus === 'pending').length})
+            </button>
+            <button 
+              className={`filter-tab ${filter === 'approved' ? 'active' : ''}`}
+              onClick={() => setFilter('approved')}
+            >
+              Approved ({institutes.filter(i => i.verifiedStatus === 'approved').length})
+            </button>
+            <button 
+              className={`filter-tab ${filter === 'rejected' ? 'active' : ''}`}
+              onClick={() => setFilter('rejected')}
+            >
+              Rejected ({institutes.filter(i => i.verifiedStatus === 'rejected').length})
+            </button>
           </div>
-        ) : (
-          institutes.map(institute => (
-            <div key={institute._id || institute.id || Math.random().toString(36).substr(2, 9)} className="institute-card">
-              <div className="institute-header">
-                <h3>{institute.name || 'Unnamed Institute'}</h3>
-                <span className={`status-badge ${institute.status || 'pending'}`}>
-                  {institute.status || 'pending'}
-                </span>
-              </div>
-              
-              <div className="institute-details">
-                <div className="detail-row">
-                  <span className="label">Category:</span>
-                  <span className="value">{institute.category || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Affiliation:</span>
-                  <span className="value">{institute.affiliation || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Contact:</span>
-                  <span className="value">
-                    {institute.contact?.email || 'No email'} | {institute.contact?.phone || 'No phone'}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Address:</span>
-                  <span className="value">
-                    {institute.address?.city || 'Unknown city'}, {institute.address?.state || 'Unknown state'}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Description:</span>
-                  <span className="value">{institute.description || 'No description provided'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Registered by:</span>
-                  <span className="value">
-                    {institute.user?.name || 'Unknown user'} ({institute.user?.email || 'No email'})
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Registration Date:</span>
-                  <span className="value">{formatDate(institute.createdAt)}</span>
-                </div>
-              </div>
-
-              <div className="institute-actions">
-                <button
-                  onClick={() => handleStatusUpdate(institute._id, 'approved')}
-                  className="btn btn-success"
-                  disabled={actionLoading[institute._id]}
-                >
-                  {actionLoading[institute._id] ? 'Processing...' : 'Approve Institute'}
-                </button>
-                <button
-                  onClick={() => handleStatusUpdate(institute._id, 'rejected')}
-                  className="btn btn-danger"
-                  disabled={actionLoading[institute._id]}
-                >
-                  {actionLoading[institute._id] ? 'Processing...' : 'Reject Institute'}
-                </button>
-              </div>
-            </div>
-          ))
+        </div>
+        
+        {alert && (
+          <div className={`alert alert-${alert.type}`}>
+            {alert.message}
+          </div>
         )}
+        
+        <div className="table-container">
+          <div className="table-header">
+            <h2>Institutes</h2>
+            <div className="table-actions">
+              <span>{filteredInstitutes.length} institutes</span>
+            </div>
+          </div>
+          
+          {filteredInstitutes.length > 0 ? (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Institute</th>
+                  <th>Category</th>
+                  <th>Contact</th>
+                  <th>Location</th>
+                  <th>Registration Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInstitutes.map(institute => (
+                  <tr key={institute._id}>
+                    <td>
+                      <div className="institute-info">
+                        <strong>{institute.name}</strong>
+                        <div className="institute-meta">
+                          <span>By: {institute.userId?.name}</span>
+                          <span>{institute.userId?.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{institute.category}</td>
+                    <td>
+                      <div className="contact-info">
+                        <div>{institute.contactInfo}</div>
+                        <div>{institute.userId?.phone}</div>
+                      </div>
+                    </td>
+                    <td>{institute.city}, {institute.state}</td>
+                    <td>{new Date(institute.createdDate).toLocaleDateString()}</td>
+                    <td>
+                      <span className={`status-badge ${institute.verifiedStatus}`}>
+                        {institute.verifiedStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        {institute.verifiedStatus === 'pending' && (
+                          <>
+                            <button 
+                              className="btn btn-sm btn-success"
+                              onClick={() => handleStatusUpdate(institute._id, 'approved')}
+                              disabled={loading}
+                            >
+                              <i className="fas fa-check"></i> Approve
+                            </button>
+                            <button 
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleStatusUpdate(institute._id, 'rejected')}
+                              disabled={loading}
+                            >
+                              <i className="fas fa-times"></i> Reject
+                            </button>
+                          </>
+                        )}
+                        {institute.verifiedStatus === 'approved' && (
+                          <button 
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleStatusUpdate(institute._id, 'rejected')}
+                            disabled={loading}
+                          >
+                            <i className="fas fa-times"></i> Reject
+                          </button>
+                        )}
+                        {institute.verifiedStatus === 'rejected' && (
+                          <button 
+                            className="btn btn-sm btn-success"
+                            onClick={() => handleStatusUpdate(institute._id, 'approved')}
+                            disabled={loading}
+                          >
+                            <i className="fas fa-check"></i> Approve
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="no-data">
+              <h3>No institutes found</h3>
+              <p>
+                {filter === 'all' 
+                  ? 'No institutes have registered yet' 
+                  : `No ${filter} institutes found`
+                }
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

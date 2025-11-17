@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './AdminPanel.css';
+import './UserPanel.css';
 
-const AdminSidebar = () => {
+const UserSidebar = () => {
   const location = useLocation();
 
   const isActive = (path) => {
@@ -18,8 +18,8 @@ const AdminSidebar = () => {
       <ul>
         <li>
           <Link 
-            to="/admin/dashboard" 
-            className={isActive('/admin/dashboard') ? 'active' : ''}
+            to="/user/dashboard" 
+            className={isActive('/user/dashboard') ? 'active' : ''}
           >
             <i className="fas fa-tachometer-alt"></i>
             Dashboard
@@ -27,29 +27,29 @@ const AdminSidebar = () => {
         </li>
         <li>
           <Link 
-            to="/admin/institutes" 
-            className={isActive('/admin/institutes') ? 'active' : ''}
+            to="/institutes" 
+            className={isActive('/institutes') ? 'active' : ''}
           >
-            <i className="fas fa-university"></i>
-            Manage Institutes
+            <i className="fas fa-search"></i>
+            Browse Institutes
           </Link>
         </li>
         <li>
           <Link 
-            to="/admin/users" 
-            className={isActive('/admin/users') ? 'active' : ''}
+            to="/user/reviews" 
+            className={isActive('/user/reviews') ? 'active' : ''}
           >
-            <i className="fas fa-users"></i>
-            Manage Users
+            <i className="fas fa-star"></i>
+            My Reviews
           </Link>
         </li>
         <li>
           <Link 
-            to="/admin/analytics" 
-            className={isActive('/admin/analytics') ? 'active' : ''}
+            to="/user/enquiries" 
+            className={isActive('/user/enquiries') ? 'active' : ''}
           >
-            <i className="fas fa-chart-bar"></i>
-            Analytics
+            <i className="fas fa-envelope"></i>
+            My Enquiries
           </Link>
         </li>
       </ul>
@@ -57,4 +57,4 @@ const AdminSidebar = () => {
   );
 };
 
-export default AdminSidebar;
+export default UserSidebar;

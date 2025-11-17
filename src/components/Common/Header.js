@@ -1,83 +1,52 @@
-import React, { useState } from 'react';
+import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import './Common.css';
 
 const Header = () => {
-  const { user, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
-    setIsMenuOpen(false);
-  };
-
-  const getDashboardLink = () => {
-    if (!user) return null;
-    
-    switch (user.role) {
-      case 'admin':
-        return '/admin/dashboard';
-      case 'institute':
-        return '/institute/dashboard';
-      case 'user':
-        return '/user/dashboard';
-      default:
-        return null;
-    }
   };
 
   return (
     <header className="header">
       <div className="container">
         <div className="header-content">
-          {/* Logo */}
           <Link to="/" className="logo">
-            <span className="logo-icon">🎓</span>
-            <span className="logo-text">EduList</span>
+            <i className="fas fa-graduation-cap"></i>
+            <span>EduList</span>
           </Link>
-
-          {/* Navigation */}
-          <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
-            <Link to="/institutes" onClick={() => setIsMenuOpen(false)}>
-              Browse Institutes
-            </Link>
-            
-            {user ? (
-              <>
-                <Link to={getDashboardLink()} onClick={() => setIsMenuOpen(false)}>
-                  Dashboard
-                </Link>
-                <div className="user-menu">
-                  <span className="user-greeting">Hello, {user.name}</span>
-                  <button onClick={handleLogout} className="logout-btn">
-                    Logout
-                  </button>
-                </div>
-              </>
+          
+          <nav className="main-nav">
+            <ul>
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/institutes">Institutes</Link></li>
+            </ul>
+          </nav>
+          
+          <div className="header-actions">
+            {isAuthenticated ? (
+              <div className="user-menu">
+                <span className="user-name">
+                  {user?.name}
+                  {user?.role === 'admin' && <span className="user-role"> (Admin)</span>}
+                  {user?.role === 'institute' && <span className="user-role"> (Institute)</span>}
+                </span>
+                <button className="btn btn-sm" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
             ) : (
               <div className="auth-buttons">
-                <Link to="/login" className="btn btn-outline">
-                  Login
-                </Link>
-                <Link to="/register" className="btn btn-primary">
-                  Register
-                </Link>
+                <Link to="/login" className="btn btn-sm">Login</Link>
+                <Link to="/register" className="btn btn-sm btn-secondary">Register</Link>
               </div>
             )}
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <button 
-            className="menu-toggle"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
+          </div>
         </div>
       </div>
     </header>

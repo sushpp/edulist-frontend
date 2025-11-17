@@ -1,30 +1,40 @@
 import api from './api';
 
-export const authService = {
-  login: async (email, password) => {
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
+// Set auth token header
+export const setAuthToken = (token) => {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+  }
+};
 
-  register: async (userData) => {
-    try {
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
+// Register user
+export const register = async (formData) => {
+  try {
+    const res = await api.post('/auth/register', formData);
+    return res.data;
+  } catch (err) {
+    throw err.response.data;
+  }
+};
 
-  getCurrentUser: async () => {
-    try {
-      const response = await api.get('/auth/me');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+// Login user
+export const login = async (formData) => {
+  try {
+    const res = await api.post('/auth/login', formData);
+    return res.data;
+  } catch (err) {
+    throw err.response.data;
+  }
+};
+
+// Get current user
+export const getCurrentUser = async () => {
+  try {
+    const res = await api.get('/auth');
+    return res.data;
+  } catch (err) {
+    throw err.response.data;
   }
 };

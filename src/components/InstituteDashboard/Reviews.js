@@ -1,165 +1,276 @@
 import React, { useState, useEffect } from 'react';
-import { reviewService } from '../../services/review';
-import { instituteService } from '../../services/institute';
+import InstituteSidebar from './InstituteSidebar';
+import api from '../../services/api';
+import './InstituteDashboard.css';
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([]);
-  const [institute, setInstitute] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [alert, setAlert] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchInstituteAndReviews();
+    const fetchReviews = async () => {
+      try {
+        const res = await api.get('/institutes/dashboard/me');
+        setReviews(res.data.reviews);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchReviews();
   }, []);
 
-  const fetchInstituteAndReviews = async () => {
-    try {
-      // Get institute profile first to get the institute ID
-      const instituteData = await instituteService.getInstituteProfile();
-      setInstitute(instituteData);
-      
-      // Then fetch reviews for this institute
-      if (instituteData && instituteData._id) {
-        const reviewsData = await reviewService.getInstituteReviews(instituteData._id);
-        // FIX: Ensure reviews is always an array with multiple fallbacks
-        const safeReviewsData = Array.isArray(reviewsData) ? reviewsData : 
-                               reviewsData?.reviews ? reviewsData.reviews : 
-                               reviewsData?.data ? reviewsData.data : [];
-        setReviews(safeReviewsData);
-      } else {
-        // FIX: Set empty array if no institute ID
-        setReviews([]);
+  const handleFlagReview = async (id) => {
+    if (window.confirm('Are you sure you want to flag this review as inappropriate?')) {
+      setLoading(true);
+      setAlert(null);
+
+      try {
+        await api.put(`/reviews/${id}`, { approvalStatus: 'pending' });
+        setReviews(reviews.map(review => 
+          review._id === id ? { ...review, approvalStatus: 'pending' } : review
+        ));
+        setAlert({ type: 'success', message: 'Review flagged for review!' });
+      } catch (err) {
+        setAlert({ type: 'danger', message: 'Failed to flag review' });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      // FIX: Set empty array on error to prevent crashes
-      setReviews([]);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const getRatingStars = (rating) => {
-    // FIX: Ensure rating is a number and within valid range
-    const safeRating = Math.max(0, Math.min(5, Number(rating) || 0));
-    return '⭐'.repeat(safeRating) + '☆'.repeat(5 - safeRating);
+  const viewReview = (review) => {
+    setSelectedReview(review);
   };
 
-  // FIX: Calculate average rating safely
+  const closeReview = () => {
+    setSelectedReview(null);
+  };
+
   const calculateAverageRating = () => {
-    if (!reviews || !Array.isArray(reviews) || reviews.length === 0) return 0;
-    
-    const validReviews = reviews.filter(review => 
-      review && typeof review.rating === 'number' && review.rating >= 1 && review.rating <= 5
-    );
-    
-    if (validReviews.length === 0) return 0;
-    
-    const sum = validReviews.reduce((acc, review) => acc + review.rating, 0);
-    return (sum / validReviews.length).toFixed(1);
+    if (reviews.length === 0) return 0;
+    const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return (total / reviews.length).toFixed(1);
   };
 
-  // FIX: Count reviews by rating safely
-  const getRatingCount = (stars) => {
-    if (!reviews || !Array.isArray(reviews)) return 0;
-    return reviews.filter(review => 
-      review && review.rating === stars
-    ).length;
+  const getRatingDistribution = () => {
+    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviews.forEach(review => {
+      distribution[review.rating]++;
+    });
+    return distribution;
   };
 
-  if (loading) {
-    return <div className="loading">Loading reviews...</div>;
-  }
+  const ratingDistribution = getRatingDistribution();
 
   return (
-    <div className="reviews-management">
-      <div className="page-header">
-        <h2>Student Reviews</h2>
-        <p>View and manage reviews from students and parents</p>
-      </div>
-
-      {/* Reviews Summary */}
-      <div className="reviews-summary">
-        <div className="summary-card">
-          <h3>Average Rating</h3>
-          <div className="rating-display">
-            <span className="average-rating">
-              {calculateAverageRating()}
-            </span>
-            <div className="stars">
-              {getRatingStars(Math.round(calculateAverageRating()))}
-            </div>
-            <span className="review-count">
-              ({Array.isArray(reviews) ? reviews.length : 0} reviews)
-            </span>
+    <div className="dashboard-layout">
+      <InstituteSidebar />
+      
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <h1>Reviews</h1>
+          <div className="table-actions">
+            <span>{reviews.length} total reviews</span>
           </div>
         </div>
-
-        <div className="summary-card">
-          <h3>Rating Distribution</h3>
-          <div className="rating-bars">
-            {/* FIX: Added safety checks for rating distribution */}
-            {[5, 4, 3, 2, 1].map(stars => {
-              const count = getRatingCount(stars);
-              const totalReviews = Array.isArray(reviews) ? reviews.length : 0;
-              const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-              
-              return (
-                <div key={stars} className="rating-bar">
-                  <span className="stars">{getRatingStars(stars)}</span>
-                  <div className="bar-container">
-                    <div 
-                      className="bar-fill"
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                  <span className="count">({count})</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Reviews List */}
-      <div className="reviews-list">
-        <h3>All Reviews</h3>
         
-        {/* FIX: Enhanced empty state check */}
-        {!reviews || !Array.isArray(reviews) || reviews.length === 0 ? (
-          <div className="empty-state">
-            <p>No reviews received yet</p>
+        {alert && (
+          <div className={`alert alert-${alert.type}`}>
+            {alert.message}
           </div>
-        ) : (
-          <div className="reviews-grid">
-            {/* FIX: Added array safety check before mapping */}
-            {Array.isArray(reviews) && reviews.map(review => (
-              <div key={review._id || review.id} className="review-card">
-                <div className="review-header">
-                  <div className="reviewer-info">
-                    <div className="reviewer-avatar">
-                      {/* FIX: Added safety check for user name */}
-                      {review.user?.name?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                    <div>
-                      <strong>{review.user?.name || 'Anonymous'}</strong>
-                      <div className="review-rating">
-                        {/* FIX: Added safety check for rating */}
-                        {getRatingStars(review.rating)}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="review-date">
-                    {/* FIX: Added safety check for date */}
-                    {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Unknown date'}
-                  </span>
+        )}
+        
+        <div className="dashboard-cards">
+          <div className="dashboard-card primary">
+            <div className="card-icon">
+              <i className="fas fa-star"></i>
+            </div>
+            <h3>Average Rating</h3>
+            <div className="card-value">{calculateAverageRating()}</div>
+          </div>
+          
+          <div className="dashboard-card success">
+            <div className="card-icon">
+              <i className="fas fa-thumbs-up"></i>
+            </div>
+            <h3>5 Star Reviews</h3>
+            <div className="card-value">{ratingDistribution[5]}</div>
+          </div>
+          
+          <div className="dashboard-card warning">
+            <div className="card-icon">
+              <i className="fas fa-comment"></i>
+            </div>
+            <h3>Total Reviews</h3>
+            <div className="card-value">{reviews.length}</div>
+          </div>
+        </div>
+        
+        <div className="rating-distribution">
+          <h3>Rating Distribution</h3>
+          <div className="distribution-bars">
+            {[5, 4, 3, 2, 1].map(rating => (
+              <div key={rating} className="rating-bar">
+                <span className="rating-label">{rating} stars</span>
+                <div className="bar-container">
+                  <div 
+                    className="bar" 
+                    style={{ width: `${reviews.length > 0 ? (ratingDistribution[rating] / reviews.length) * 100 : 0}%` }}
+                  ></div>
                 </div>
-                
-                <p className="review-text">
-                  {/* FIX: Added safety check for review text */}
-                  {review.reviewText || 'No review text provided'}
-                </p>
+                <span className="rating-count">{ratingDistribution[rating]}</span>
               </div>
             ))}
+          </div>
+        </div>
+        
+        <div className="table-container">
+          <div className="table-header">
+            <h2>All Reviews</h2>
+          </div>
+          
+          {reviews.length > 0 ? (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Rating</th>
+                  <th>Review</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviews.map(review => (
+                  <tr key={review._id}>
+                    <td>
+                      <div className="user-info">
+                        <strong>{review.userId?.name}</strong>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="rating">
+                        {[...Array(5)].map((_, i) => (
+                          <i
+                            key={i}
+                            className={`fas fa-star ${i < review.rating ? 'active' : ''}`}
+                          ></i>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="review-preview">
+                        {review.reviewText.substring(0, 100)}
+                        {review.reviewText.length > 100 && '...'}
+                      </div>
+                    </td>
+                    <td>{new Date(review.date).toLocaleDateString()}</td>
+                    <td>
+                      <span className={`status-badge ${review.approvalStatus}`}>
+                        {review.approvalStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button 
+                          className="btn btn-sm btn-primary"
+                          onClick={() => viewReview(review)}
+                        >
+                          <i className="fas fa-eye"></i>
+                        </button>
+                        {review.approvalStatus === 'approved' && (
+                          <button 
+                            className="btn btn-sm btn-warning"
+                            onClick={() => handleFlagReview(review._id)}
+                            disabled={loading}
+                          >
+                            <i className="fas fa-flag"></i>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="no-data">
+              <h3>No reviews yet</h3>
+              <p>Reviews from users will appear here</p>
+            </div>
+          )}
+        </div>
+        
+        {selectedReview && (
+          <div className="modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Review Details</h2>
+                <button className="modal-close" onClick={closeReview}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="review-details">
+                  <div className="detail-section">
+                    <h3>User Information</h3>
+                    <p><strong>Name:</strong> {selectedReview.userId?.name}</p>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Rating</h3>
+                    <div className="rating">
+                      {[...Array(5)].map((_, i) => (
+                        <i
+                          key={i}
+                          className={`fas fa-star ${i < selectedReview.rating ? 'active' : ''}`}
+                        ></i>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Review</h3>
+                    <p>{selectedReview.reviewText}</p>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Status</h3>
+                    <span className={`status-badge ${selectedReview.approvalStatus}`}>
+                      {selectedReview.approvalStatus}
+                    </span>
+                  </div>
+                  
+                  <div className="detail-section">
+                    <h3>Date</h3>
+                    <p>{new Date(selectedReview.date).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                {selectedReview.approvalStatus === 'approved' && (
+                  <button 
+                    className="btn btn-warning"
+                    onClick={() => {
+                      handleFlagReview(selectedReview._id);
+                      closeReview();
+                    }}
+                    disabled={loading}
+                  >
+                    Flag as Inappropriate
+                  </button>
+                )}
+                <button className="btn btn-primary" onClick={closeReview}>
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

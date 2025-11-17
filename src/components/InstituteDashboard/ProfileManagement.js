@@ -1,239 +1,328 @@
-// ProfileManagement.jsx
-import React, { useState, useEffect } from 'react';
-import { instituteService } from '../../services/institute';
-import { uploadService } from '../../services/upload';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext';
+import InstituteSidebar from './InstituteSidebar';
+import api from '../../services/api';
 import './InstituteDashboard.css';
 
 const ProfileManagement = () => {
+  const { user } = useContext(AuthContext);
   const [institute, setInstitute] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [message, setMessage] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    category: '',
+    affiliation: '',
+    address: '',
+    city: '',
+    state: '',
+    contactInfo: '',
+    website: '',
+    description: '',
+  });
+  const [logoPreview, setLogoPreview] = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+  const [alert, setAlert] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
-    fetchInstituteProfile();
+    const fetchInstitute = async () => {
+      try {
+        const res = await api.get('/institutes/dashboard/me');
+        const instituteData = res.data.institute;
+        setInstitute(instituteData);
+        setFormData({
+          name: instituteData.name || '',
+          category: instituteData.category || '',
+          affiliation: instituteData.affiliation || '',
+          address: instituteData.address || '',
+          city: instituteData.city || '',
+          state: instituteData.state || '',
+          contactInfo: instituteData.contactInfo || '',
+          website: instituteData.website || '',
+          description: instituteData.description || '',
+        });
+        if (instituteData.logo) {
+          setLogoPreview(`http://localhost:5000/uploads/${instituteData.logo}`);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchInstitute();
   }, []);
 
-  const fetchInstituteProfile = async () => {
-    try {
-      const data = await instituteService.getInstituteProfile();
-      setInstitute(data);
-      setFormData(data);
-    } catch (error) {
-      console.error('Error fetching institute profile:', error);
-      setMessage('Error loading profile');
-      const defaultInstitute = {
-        name: '',
-        category: '',
-        affiliation: '',
-        description: '',
-        contact: { email: '', phone: '', website: '' },
-        address: { street: '', city: '', state: '', pincode: '' },
-        images: [],
-        logo: null
-      };
-      setInstitute(defaultInstitute);
-      setFormData(defaultInstitute);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent] || {}),
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const handleImageUpload = async (e, imageType) => {
+  const onLogoChange = e => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setMessage('Please select a valid image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage('Image size should be less than 5MB');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const uploadResponse = await uploadService.uploadImage(file);
-      const imageData = {
-        url: uploadResponse.imageUrl,
-        filename: uploadResponse.filename
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
       };
-
-      if (imageType === 'logo') {
-        setFormData(prev => ({ ...prev, logo: imageData }));
-      } else if (imageType === 'institute') {
-        setFormData(prev => {
-          const currentImages = Array.isArray(prev.images) ? prev.images : [];
-          const newImage = { ...imageData, isPrimary: currentImages.length === 0 };
-          return {
-            ...prev,
-            images: [...currentImages, newImage]
-          };
-        });
-      }
-
-      setMessage('Image uploaded successfully!');
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setMessage('Error uploading image');
-    } finally {
-      setUploading(false);
-      setTimeout(() => setMessage(''), 3000);
+      reader.readAsDataURL(file);
     }
   };
 
-  const removeImage = (index, imageType) => {
-    if (imageType === 'logo') {
-      setFormData(prev => ({ ...prev, logo: null }));
-    } else if (imageType === 'institute') {
-      setFormData(prev => ({
-        ...prev,
-        images: Array.isArray(prev.images) ? prev.images.filter((_, i) => i !== index) : []
-      }));
-    }
-  };
-
-  const setPrimaryImage = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      images: Array.isArray(prev.images)
-        ? prev.images.map((img, i) => ({ ...img, isPrimary: i === index }))
-        : []
-    }));
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
+    setAlert(null);
+
     try {
-      await instituteService.updateInstitute(formData);
-      setInstitute(formData);
-      setEditing(false);
-      setMessage('Profile updated successfully!');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setMessage('Error updating profile');
+      const formDataToSend = new FormData();
+      Object.keys(formData).forEach(key => {
+        formDataToSend.append(key, formData[key]);
+      });
+      
+      if (logoFile) {
+        formDataToSend.append('logo', logoFile);
+      }
+
+      const res = await api.put('/institutes', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setInstitute(res.data);
+      setAlert({ type: 'success', message: 'Profile updated successfully!' });
+      setEditMode(false);
+    } catch (err) {
+      setAlert({ type: 'danger', message: err.response?.data?.msg || 'Failed to update profile' });
     } finally {
       setLoading(false);
-      setTimeout(() => setMessage(''), 3000);
     }
   };
 
-  const getImageUrl = (image) => {
-    if (!image?.url) return '';
-    return image.url;
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    if (!editMode && institute) {
+      setFormData({
+        name: institute.name || '',
+        category: institute.category || '',
+        affiliation: institute.affiliation || '',
+        address: institute.address || '',
+        city: institute.city || '',
+        state: institute.state || '',
+        contactInfo: institute.contactInfo || '',
+        website: institute.website || '',
+        description: institute.description || '',
+      });
+    }
   };
 
-  if (loading && !institute) {
-    return <div className="loading">Loading profile...</div>;
-  }
-
   return (
-    <div className="profile-management">
-      <div className="page-header">
-        <h2>Institute Profile</h2>
-        <button onClick={() => setEditing(!editing)} className="btn btn-primary">
-          {editing ? 'Cancel Edit' : 'Edit Profile'}
-        </button>
-      </div>
-
-      {message && (
-        <div className={`message ${message.includes('Error') ? 'error' : 'success'}`}>
-          {message}
+    <div className="dashboard-layout">
+      <InstituteSidebar />
+      
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <h1>Profile Management</h1>
+          <button className="btn btn-primary" onClick={toggleEditMode}>
+            {editMode ? 'Cancel' : 'Edit Profile'}
+          </button>
         </div>
-      )}
-
-      {formData && (
-        <form onSubmit={handleSubmit} className="profile-form">
-          {/* Logo Section */}
-          <div className="form-section">
-            <h3>Institute Logo</h3>
-            <div className="image-upload-section">
-              <div className="image-preview">
-                {formData.logo?.url ? (
-                  <img src={getImageUrl(formData.logo)} alt="Logo" className="logo-preview" />
-                ) : (
-                  'No logo uploaded'
-                )}
-                {editing && formData.logo && (
-                  <button type="button" onClick={() => removeImage(0, 'logo')}>
-                    Remove
-                  </button>
-                )}
-              </div>
-              {editing && (
-                <label className="upload-btn">
-                  {uploading ? 'Uploading...' : 'Upload Logo'}
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} disabled={uploading} hidden />
-                </label>
-              )}
-            </div>
+        
+        {alert && (
+          <div className={`alert alert-${alert.type}`}>
+            {alert.message}
           </div>
-
-          {/* Images Section */}
-          <div className="form-section">
-            <h3>Institute Images</h3>
-            <div className="image-upload-section">
-              {Array.isArray(formData.images) && formData.images.length > 0 ? (
-                <div className="images-grid">
-                  {formData.images.map((img, index) => (
-                    <div key={img._id || img.filename} className={`image-preview ${img.isPrimary ? 'primary' : ''}`}>
-                      <img src={getImageUrl(img)} alt={`Image ${index}`} />
-                      {editing && (
-                        <div className="image-actions">
-                          <button type="button" onClick={() => setPrimaryImage(index)} disabled={img.isPrimary}>Set Primary</button>
-                          <button type="button" onClick={() => removeImage(index, 'institute')}>Remove</button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+        )}
+        
+        <div className="form-section">
+          <h2>Institute Information</h2>
+          
+          <div className="profile-header">
+            <div className="profile-logo">
+              {logoPreview ? (
+                <img src={logoPreview} alt="Institute Logo" />
               ) : (
-                'No images uploaded'
-              )}
-              {editing && (
-                <label className="upload-btn">
-                  {uploading ? 'Uploading...' : 'Add Images'}
-                  <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'institute')} hidden />
-                </label>
+                <div className="placeholder-logo">
+                  <i className="fas fa-university"></i>
+                </div>
               )}
             </div>
+            
+            <div className="profile-info">
+              <h3>{institute?.name}</h3>
+              <span className={`status-badge ${institute?.verifiedStatus}`}>
+                {institute?.verifiedStatus}
+              </span>
+            </div>
           </div>
-
-          {/* Other fields follow (Category, Contact, Description, etc.) */}
-
-          <div className="form-actions">
-            {editing && (
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Updating...' : 'Update Profile'}
-              </button>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label htmlFor="name">Institute Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={onChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="form-col">
+                <div className="form-group">
+                  <label htmlFor="category">Category</label>
+                  <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={onChange}
+                    disabled={!editMode}
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    <option value="School">School</option>
+                    <option value="College">College</option>
+                    <option value="University">University</option>
+                    <option value="Coaching Center">Coaching Center</option>
+                    <option value="Preschool">Preschool</option>
+                    <option value="Vocational Training">Vocational Training</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="affiliation">Affiliation</label>
+              <input
+                type="text"
+                id="affiliation"
+                name="affiliation"
+                value={formData.affiliation}
+                onChange={onChange}
+                disabled={!editMode}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="address">Address</label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={onChange}
+                disabled={!editMode}
+                required
+              />
+            </div>
+            
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label htmlFor="city">City</label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={onChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="form-col">
+                <div className="form-group">
+                  <label htmlFor="state">State</label>
+                  <input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={onChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="contactInfo">Contact Information</label>
+              <input
+                type="text"
+                id="contactInfo"
+                name="contactInfo"
+                value={formData.contactInfo}
+                onChange={onChange}
+                disabled={!editMode}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="website">Website</label>
+              <input
+                type="text"
+                id="website"
+                name="website"
+                value={formData.website}
+                onChange={onChange}
+                disabled={!editMode}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={onChange}
+                rows="5"
+                disabled={!editMode}
+              ></textarea>
+            </div>
+            
+            {editMode && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="logo">Logo</label>
+                  <input
+                    type="file"
+                    id="logo"
+                    name="logo"
+                    onChange={onLogoChange}
+                    accept="image/*"
+                  />
+                </div>
+                
+                <div className="btn-group">
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={toggleEditMode}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
             )}
-          </div>
-        </form>
-      )}
+          </form>
+        </div>
+      </div>
     </div>
   );
 };
