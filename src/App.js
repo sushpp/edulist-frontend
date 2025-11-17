@@ -3,7 +3,7 @@ import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
-// Make sure ALL these imports are present
+// === IMPORT ALL YOUR COMPONENTS HERE ===
 import Home from './components/Home/Home';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
@@ -18,8 +18,8 @@ import InstituteDashboard from './components/InstituteDashboard/InstituteDashboa
 import ProfileManagement from './components/InstituteDashboard/ProfileManagement';
 import Courses from './components/InstituteDashboard/Courses';
 import Facilities from './components/InstituteDashboard/Facilities';
-import Enquiries from './components/InstituteDashboard/Enquiries';
-import Reviews from './components/InstituteDashboard/Reviews';
+import InstituteEnquiries from './components/InstituteDashboard/Enquiries';
+import InstituteReviews from './components/InstituteDashboard/Reviews';
 import AdminDashboard from './components/AdminPanel/AdminDashboard';
 import ManageInstitutes from './components/AdminPanel/ManageInstitutes';
 import ManageUsers from './components/AdminPanel/ManageUsers';
@@ -71,8 +71,8 @@ function App() {
               <Route path="/institute/profile" element={<ProfileManagement />} />
               <Route path="/institute/courses" element={<Courses />} />
               <Route path="/institute/facilities" element={<Facilities />} />
-              <Route path="/institute/enquiries" element={<Enquiries />} />
-              <Route path="/institute/reviews" element={<Reviews />} />
+              <Route path="/institute/enquiries" element={<InstituteEnquiries />} />
+              <Route path="/institute/reviews" element={<InstituteReviews />} />
             </>
           )}
           
