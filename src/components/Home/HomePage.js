@@ -14,26 +14,29 @@ const HomePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // -------------------------------------------------------
   useEffect(() => {
     fetchFeaturedInstitutes();
     fetchStats();
   }, []);
 
   // -------------------------------------------------------
+  // ULTRA-DEFENSIVE: Normalize the response from the service
   const normalizeInstituteResponse = (response) => {
-    if (!response) return [];
-
-    // cases:
-    // { institutes: [...] }
-    if (Array.isArray(response.institutes)) return response.institutes;
-
-    // direct array
-    if (Array.isArray(response)) return response;
-
-    // { data: { institutes: [...] } }
-    if (Array.isArray(response?.data?.institutes)) return response.data.institutes;
-
+    // Case 1: Response is an array directly
+    if (Array.isArray(response)) {
+      return response;
+    }
+    // Case 2: Response is an object with an 'institutes' property that is an array
+    if (response && typeof response === 'object' && Array.isArray(response.institutes)) {
+      return response.institutes;
+    }
+    // Case 3: Response is an object with a 'data' property that contains an 'institutes' array
+    if (response && typeof response === 'object' && response.data && Array.isArray(response.data.institutes)) {
+      return response.data.institutes;
+    }
+    
+    // Case 4: Anything else is unexpected, return an empty array to prevent crashes
+    console.warn('Unexpected response structure from instituteService:', response);
     return [];
   };
 
@@ -43,23 +46,25 @@ const HomePage = () => {
 
     try {
       const response = await instituteService.getAllInstitutes();
-      console.log("🔍 Raw API Response:", response);
+      console.log("🔍 Raw API Response in HomePage:", response);
 
+      // Use the ultra-defensive normalize function
       const institutesArray = normalizeInstituteResponse(response);
+      console.log("✅ Normalized array for HomePage:", institutesArray);
 
-      const featured = institutesArray.slice(0, 6);
+      // ULTRA-DEFENSIVE: Safely slice the array
+      const featured = Array.isArray(institutesArray) ? institutesArray.slice(0, 6) : [];
       setFeaturedInstitutes(featured);
 
     } catch (error) {
       console.error("❌ Error fetching featured institutes:", error);
       setFetchError(error.message || "Failed to fetch institutes");
-      setFeaturedInstitutes([]);
+      setFeaturedInstitutes([]); // Always set to an array
     } finally {
       setIsLoading(false);
     }
   };
 
-  // -------------------------------------------------------
   const fetchStats = async () => {
     setStats({
       institutes: 125,
@@ -68,7 +73,6 @@ const HomePage = () => {
     });
   };
 
-  // -------------------------------------------------------
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
@@ -77,20 +81,18 @@ const HomePage = () => {
   };
 
   const getAverageRating = (institute) => {
-    if (!Array.isArray(institute?.reviews) || institute.reviews.length === 0) return 0;
+    if (!institute?.reviews || !Array.isArray(institute.reviews) || institute.reviews.length === 0) return 0;
     const sum = institute.reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
     return (sum / institute.reviews.length).toFixed(1);
   };
 
-  // -------------------------------------------------------
   return (
     <div className="homepage">
-
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
           <h1>Find Your Perfect Educational Institute</h1>
-          <p>Discover the best schools, colleges, and coaching centers with authentic reviews</p>
+          <p>Discover the best schools, colleges, and coaching centers</p>
 
           <form onSubmit={handleSearch} className="search-box">
             <input
@@ -128,23 +130,29 @@ const HomePage = () => {
                 <button onClick={fetchFeaturedInstitutes} className="btn btn-primary">Try Again</button>
               </div>
             ) : featuredInstitutes.length > 0 ? (
-              featuredInstitutes.map((inst) => (
-                <div key={inst._id} className="institute-card">
-                  <div className="card-image">
-                    <div className="image-placeholder">{inst.name?.charAt(0).toUpperCase() || 'I'}</div>
-                    <div className="card-badge">⭐ {getAverageRating(inst)}</div>
+              featuredInstitutes.map((inst) => {
+                // ULTRA-DEFENSIVE: Ensure each item is an object
+                if (!inst || typeof inst !== 'object') {
+                  console.warn('Invalid institute object in HomePage map:', inst);
+                  return null;
+                }
+
+                return (
+                  <div key={inst._id || inst.id || Math.random().toString(36).substr(2, 9)} className="institute-card">
+                    <div className="card-image">
+                      <div className="image-placeholder">{inst.name?.charAt(0).toUpperCase() || 'I'}</div>
+                      <div className="card-badge">⭐ {getAverageRating(inst)}</div>
+                    </div>
+                    <div className="card-content">
+                      <h3>{inst.name || 'Unnamed Institute'}</h3>
+                      <p>{inst.category} • {inst.affiliation}</p>
+                      <p>📍 {inst.address?.city}, {inst.address?.state}</p>
+                      <p>{(inst.description || '').substring(0, 80)}...</p>
+                      <Link to={`/institute/${inst._id}`} className="btn btn-primary">View Details</Link>
+                    </div>
                   </div>
-                  <div className="card-content">
-                    <h3>{inst.name || 'Unnamed Institute'}</h3>
-                    <p>{inst.category} • {inst.affiliation}</p>
-                    <p>📍 {inst.address?.city}, {inst.address?.state}</p>
-                    <p>{(inst.description || '').substring(0, 80)}...</p>
-                  </div>
-                  <div className="card-actions">
-                    <Link to={`/institute/${inst._id}`} className="btn btn-primary">View Details</Link>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="empty-state">No featured institutes found.</div>
             )}
