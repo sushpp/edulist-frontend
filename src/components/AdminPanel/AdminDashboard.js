@@ -1,3 +1,4 @@
+// src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminService } from '../../services/admin';
@@ -31,9 +32,11 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // -------------------------------------------------------
   const fetchDashboardData = async () => {
     try {
-      console.log('🚀 Fetching dashboard data...');
+      setLoading(true);
+      
       const response = await adminService.getDashboardAnalytics();
 
       // --- CRITICAL DEBUGGING ---
@@ -47,27 +50,40 @@ const AdminDashboard = () => {
       const safeFeatured = (response && Array.isArray(response.featuredInstitutes)) ? response.featuredInstitutes : [];
       const safeActivities = (response && typeof response === 'object' && response.recentActivities) ? response.recentActivities : {};
 
-      setAnalytics({
-        totalUsers: safeAnalytics.totalUsers ?? 0,
-        totalInstitutes: safeAnalytics.totalInstitutes ?? 0,
-        pendingInstitutes: safeAnalytics.pendingInstitutes ?? 0,
-        totalReviews: safeAnalytics.totalReviews ?? 0,
-      });
+      // --- ATOMIC STATE UPDATES ---
+      // Set all state in a single, atomic update to prevent race conditions
+      const newState = {
+        analytics: {
+          totalUsers: safeAnalytics.totalUsers ?? 0,
+          totalInstitutes: safeAnalytics.totalInstitutes ?? 0,
+          pendingInstitutes: safeAnalytics.pendingInstitutes ?? 0,
+          totalReviews: safeAnalytics.totalReviews ?? 0,
+        },
+        featuredInstitutes: safeFeatured,
+        recentActivities: {
+          newUsers: Array.isArray(safeActivities.newUsers) ? safeActivities.newUsers : [],
+          pendingInstitutes: Array.isArray(safeActivities.pendingInstitutes) ? safeActivities.pendingInstitutes : [],
+          recentReviews: Array.isArray(safeActivities.recentReviews) ? safeActivities.recentReviews : [],
+        },
+      };
 
-      setFeaturedInstitutes(safeFeatured);
-
-      setRecentActivities({
-        newUsers: Array.isArray(safeActivities.newUsers) ? safeActivities.newUsers : [],
-        pendingInstitutes: Array.isArray(safeActivities.pendingInstitutes) ? safeActivities.pendingInstitutes : [],
-        recentReviews: Array.isArray(safeActivities.recentReviews) ? safeActivities.recentReviews : [],
-      });
+      setAnalytics(newState.analytics);
+      setFeaturedInstitutes(newState.featuredInstitutes);
+      setRecentActivities(newState.recentActivities);
 
     } catch (error) {
       console.error('❌ A critical error occurred in fetchDashboardData:', error);
-      // In case of a total failure, reset to empty state.
-      setAnalytics({ totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0 });
-      setFeaturedInstitutes([]);
-      setRecentActivities({ newUsers: [], pendingInstitutes: [], recentReviews: [] });
+      
+      // In case of a total failure, reset to empty state
+      const failureState = {
+        analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0 },
+        featuredInstitutes: [],
+        recentActivities: { newUsers: [], pendingInstitutes: [], recentReviews: [] },
+      };
+      
+      setAnalytics(failureState.analytics);
+      setFeaturedInstitutes(failureState.featuredInstitutes);
+      setRecentActivities(failureState.recentActivities);
     } finally {
       setLoading(false);
     }
@@ -135,8 +151,10 @@ const AdminDashboard = () => {
           <div className="featured-section">
             <h3>Featured Institutes</h3>
             <div className="featured-grid">
-              {featuredInstitutes.map((institute) => (
-                <div key={institute._id || Math.random()} className="featured-card">
+              {/* ULTIMATE SAFETY CHECK */}
+              {/* We check the array type RIGHT HERE, before any other logic */}
+              {Array.isArray(featuredInstitutes) && featuredInstitutes.map((institute) => (
+                <div key={institute._id || institute.id || Math.random().toString(36).substr(2, 9)} className="featured-card">
                   <h4>{institute.name || 'Unnamed Institute'}</h4>
                   <p>{institute.location || 'No location'}</p>
                 </div>

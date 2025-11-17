@@ -1,3 +1,4 @@
+// src/services/admin.js
 import api from './api';
 
 // Helper function to safely extract and ensure an array

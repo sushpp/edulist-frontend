@@ -6,8 +6,8 @@ import axios from 'axios';
 // -------------------------------
 const BACKEND_URL = 'https://edulist-backend-clv5.onrender.com/api';
 
-// NOTE: Using a CORS proxy is a temporary workaround. The ideal solution
-// is to configure CORS correctly on your backend server to allow requests
+// NOTE: The CORS proxy logic has been removed. It's a major source of instability.
+// The correct solution is to configure CORS on your backend server to allow requests
 // from your frontend's domain.
 const CORS_PROXIES = [
   'https://cors-anywhere.herokuapp.com/',
@@ -20,7 +20,7 @@ const CORS_PROXIES = [
 // -------------------------------
 const api = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 60000, // 60 seconds
+  timeout: 120000, // 60 seconds -> INCREASED TO 120 SECONDS
   headers: {
     'Content-Type': 'application/json',
   },
@@ -69,27 +69,6 @@ api.interceptors.response.use(
       message: error.message
     });
 
-    // --- CORS Retry Logic (Use with Caution) ---
-    // This is a fallback. It retries a request through a proxy ONLY if a network-level
-    // CORS error is detected. It will NOT retry if the server responds with an error message.
-    if (
-      error.message.includes('Network Error') || // More reliable for CORS issues
-      error.message.includes('CORS') ||
-      (error.response?.status === 0) // Another sign of CORS/network block
-      && !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-      const proxyUrl = CORS_PROXIES[0] + BACKEND_URL + originalRequest.url;
-
-      console.warn('🔄 CORS/Network error detected. Retrying with proxy:', proxyUrl);
-      // Make a new, direct axios call without the instance's baseURL
-      return axios({
-        ...originalRequest,
-        url: proxyUrl,
-        baseURL: undefined, // Important: override baseURL
-      });
-    }
-
     // --- 401 Unauthorized Handling ---
     // If the server explicitly says the token is invalid/expired.
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -102,7 +81,7 @@ api.interceptors.response.use(
       }
     }
 
-    // Always reject the promise so the .catch() in your service files (like adminService) runs.
+    // Always reject the promise so the .catch() in your service files runs.
     return Promise.reject(error);
   }
 );
@@ -125,9 +104,7 @@ export const authAPI = {
 export const instituteAPI = {
   getAll: (filters = {}) => api.get('/institutes', { params: filters }),
   getById: (id) => api.get(`/institutes/${id}`),
-  // FIX: Standardized admin endpoint path for consistency
   getPending: () => api.get('/admin/institutes/pending'),
-  // FIX: Standardized admin endpoint path for consistency
   updateStatus: (id, status) => api.put(`/admin/institutes/${id}/status`, { status }),
   getMyInstitute: () => api.get('/institutes/profile'),
   update: (data) => api.put('/institutes/profile', data),
@@ -151,26 +128,15 @@ export const courseAPI = {
 export const testAPI = async () => {
   try {
     console.log('🧪 Testing API connectivity...');
-    const response = await fetch(BACKEND_URL + '/health');
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Direct fetch works:', data);
-      return { success: true, method: 'direct', data };
+    const response = await api.get('/health'); // Use the axios instance for consistency
+    if (response.data) {
+      console.log('✅ API is reachable:', response.data);
+      return { success: true, data: response.data };
     }
   } catch (error) {
-    console.log('❌ Direct fetch failed:', error.message);
-    try {
-      const proxyResponse = await fetch(CORS_PROXIES[0] + BACKEND_URL + '/health');
-      if (proxyResponse.ok) {
-        const data = await proxyResponse.json();
-        console.log('✅ CORS proxy works:', data);
-        return { success: true, method: 'proxy', data };
-      }
-    } catch (proxyError) {
-      console.log('❌ CORS proxy failed:', proxyError.message);
-    }
+    console.log('❌ API is unreachable:', error.message);
+    return { success: false, error: 'API unreachable' };
   }
-  return { success: false, error: 'API unreachable' };
 };
 
 export default api;
