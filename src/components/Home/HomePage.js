@@ -48,18 +48,17 @@ const HomePage = () => {
       const response = await instituteService.getAllInstitutes();
       console.log("🔍 Raw API Response in HomePage:", response);
 
-      // Use the ultra-defensive normalize function
       const institutesArray = normalizeInstituteResponse(response);
       console.log("✅ Normalized array for HomePage:", institutesArray);
 
-      // ULTRA-DEFENSIVE: Safely slice the array
-      const featured = Array.isArray(institutesArray) ? institutesArray.slice(0, 6) : [];
-      setFeaturedInstitutes(featured);
+      // BULLETPROOF: Set state with a guaranteed array
+      setFeaturedInstitutes(Array.isArray(institutesArray) ? institutesArray : []);
 
     } catch (error) {
       console.error("❌ Error fetching featured institutes:", error);
       setFetchError(error.message || "Failed to fetch institutes");
-      setFeaturedInstitutes([]); // Always set to an array
+      // BULLETPROOF: Always set to an array on error
+      setFeaturedInstitutes([]);
     } finally {
       setIsLoading(false);
     }
