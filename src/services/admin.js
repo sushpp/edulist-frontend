@@ -38,6 +38,9 @@ export const adminService = {
     try {
       const response = await api.get('/admin/dashboard');
       
+      // CRITICAL DEBUG: Log the raw response from axios
+      console.log('Raw axios response from /admin/dashboard:', response);
+      
       if (!response || !response.data) {
         console.warn("API response for dashboard is missing or null. Returning default structure.");
         return {
@@ -48,6 +51,10 @@ export const adminService = {
       }
 
       const data = response.data;
+      
+      // CRITICAL DEBUG: Log the data object before safeGetArray
+      console.log('Data object being passed to safeGetArray:', data);
+      
       const safeResponse = {
         analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0, totalEnquiries: 0, totalCourses: 0 },
         featuredInstitutes: safeGetArray(data, ['featuredInstitutes', 'data.featuredInstitutes', 'data']),
@@ -69,9 +76,14 @@ export const adminService = {
         };
       }
 
+      // CRITICAL DEBUG: Log the final safeResponse object
+      console.log('Final safeResponse being returned by adminService:', safeResponse);
+      
       return safeResponse;
     } catch (err) {
       console.error("❌ Network or API call error fetching dashboard analytics:", err);
+      
+      // Return a safe, default structure
       return {
         analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0, totalEnquiries: 0, totalCourses: 0 },
         featuredInstitutes: [],
