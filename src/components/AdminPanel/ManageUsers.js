@@ -18,10 +18,30 @@ const ManageUsers = () => {
       setLoading(true);
       setError(null);
       const data = await adminService.getAllUsers();
-      // Ensure users is always an array with multiple fallbacks
-      const usersData = Array.isArray(data) ? data : 
-                       data?.users ? data.users : 
-                       data?.data ? data.data : [];
+      
+      // DEBUG: Log the entire response to see what you're getting
+      console.log('Full users data:', data);
+      
+      // Enhanced safety check with multiple fallbacks
+      let usersData = [];
+      
+      if (Array.isArray(data)) {
+        usersData = data;
+      } else if (data && typeof data === 'object') {
+        if (Array.isArray(data.users)) {
+          usersData = data.users;
+        } else if (Array.isArray(data.data)) {
+          usersData = data.data;
+        } else {
+          console.warn('Data is an object but does not contain an array of users:', data);
+        }
+      } else {
+        console.warn('Data is not an array or object:', data);
+      }
+      
+      // DEBUG: Log what you're setting as the state
+      console.log('Setting users to:', usersData);
+      
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -36,16 +56,19 @@ const ManageUsers = () => {
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       await adminService.toggleUserStatus(userId, !currentStatus);
-      // Added array safety check before mapping
-      setUsers(prevUsers => 
-        Array.isArray(prevUsers) 
-          ? prevUsers.map(user => 
-              user._id === userId 
-                ? { ...user, isActive: !currentStatus }
-                : user
-            )
-          : []
-      );
+      // Enhanced safety check before mapping
+      setUsers(prevUsers => {
+        if (!Array.isArray(prevUsers)) {
+          console.warn('prevUsers is not an array in toggleUserStatus:', prevUsers);
+          return [];
+        }
+        
+        return prevUsers.map(user => 
+          user._id === userId 
+            ? { ...user, isActive: !currentStatus }
+            : user
+        );
+      });
       alert(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error('Error updating user status:', error);
@@ -53,19 +76,26 @@ const ManageUsers = () => {
     }
   };
 
-  // Filter users based on search term
+  // Enhanced safety check for filtering users
   const filteredUsers = Array.isArray(users) 
-    ? users.filter(user => 
-        (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
+    ? users.filter(user => {
+        if (!user || typeof user !== 'object') {
+          console.warn('Invalid user object in users array:', user);
+          return false;
+        }
+        
+        return (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+      })
     : [];
 
-  // Pagination logic
+  // Enhanced safety check for pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const currentUsers = Array.isArray(filteredUsers) 
+    ? filteredUsers.slice(indexOfFirstUser, indexOfLastUser) 
+    : [];
+  const totalPages = Math.ceil((Array.isArray(filteredUsers) ? filteredUsers.length : 0) / usersPerPage);
 
   const paginate = pageNumber => setCurrentPage(pageNumber);
 
@@ -114,48 +144,56 @@ const ManageUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {/* Added array safety check before mapping */}
-            {Array.isArray(currentUsers) && currentUsers.map(user => (
-              <tr key={user._id || user.id}>
-                <td>
-                  <div className="user-info">
-                    <div className="user-avatar">
-                      {/* Added safety check for user name */}
-                      {user.name?.charAt(0).toUpperCase() || 'U'}
+            {/* Enhanced safety check before mapping */}
+            {Array.isArray(currentUsers) && currentUsers.map(user => {
+              // Ensure user is an object before trying to access its properties
+              if (!user || typeof user !== 'object') {
+                console.warn('Invalid user object in currentUsers:', user);
+                return null;
+              }
+              
+              return (
+                <tr key={user._id || user.id || Math.random().toString(36).substr(2, 9)}>
+                  <td>
+                    <div className="user-info">
+                      <div className="user-avatar">
+                        {/* Enhanced safety check for user name */}
+                        {user.name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      {user.name || 'Unknown User'}
                     </div>
-                    {user.name || 'Unknown User'}
-                  </div>
-                </td>
-                <td>{user.email || 'No email'}</td>
-                <td>{user.phone || 'No phone'}</td>
-                <td>
-                  <span className={`role-badge ${user.role || 'user'}`}>
-                    {user.role || 'user'}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge ${user.isActive ? 'active' : 'inactive'}`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td>
-                  {/* Added safety check for date */}
-                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}
-                </td>
-                <td>
-                  <button
-                    onClick={() => toggleUserStatus(user._id, user.isActive)}
-                    className={`btn btn-sm ${user.isActive ? 'btn-warning' : 'btn-success'}`}
-                  >
-                    {user.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>{user.email || 'No email'}</td>
+                  <td>{user.phone || 'No phone'}</td>
+                  <td>
+                    <span className={`role-badge ${user.role || 'user'}`}>
+                      {user.role || 'user'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${user.isActive ? 'active' : 'inactive'}`}>
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    {/* Enhanced safety check for date */}
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => toggleUserStatus(user._id, user.isActive)}
+                      className={`btn btn-sm ${user.isActive ? 'btn-warning' : 'btn-success'}`}
+                    >
+                      {user.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
-        {/* Added empty state */}
+        {/* Enhanced empty state */}
         {(!currentUsers || !Array.isArray(currentUsers) || currentUsers.length === 0) && (
           <div className="empty-state">
             <p>No users found</p>
@@ -163,7 +201,7 @@ const ManageUsers = () => {
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Enhanced pagination */}
       {totalPages > 1 && (
         <div className="pagination">
           <button 

@@ -1,53 +1,63 @@
 import api from './api';
 
+// Helper function to safely extract and ensure an array
+const safeGetArray = (data, possiblePaths) => {
+  if (!data || typeof data !== 'object') {
+    console.warn('Data is not an object, cannot extract array:', data);
+    return [];
+  }
+
+  for (const path of possiblePaths) {
+    const value = path.split('.').reduce((obj, key) => obj && obj[key], data);
+    
+    if (Array.isArray(value)) {
+      return value;
+    }
+    
+    // Handle case where API returns a stringified array
+    if (typeof value === 'string') {
+      try {
+        const parsedValue = JSON.parse(value);
+        if (Array.isArray(parsedValue)) {
+          console.warn(`API returned a stringified array at path ${path}. Parsed successfully.`);
+          return parsedValue;
+        }
+      } catch (e) {
+        console.warn(`API returned a string at path ${path}, but it's not valid JSON.`, value);
+      }
+    }
+  }
+  
+  console.warn('Could not find an array in any of the expected paths:', possiblePaths, 'in data:', data);
+  return [];
+};
+
 export const adminService = {
   // Fetch dashboard analytics with enhanced error handling
   getDashboardAnalytics: async () => {
     try {
       const response = await api.get('/admin/dashboard');
       
-      // If the entire response is missing or invalid
       if (!response || !response.data) {
         console.warn("API response for dashboard is missing or null. Returning default structure.");
         return {
-          analytics: {
-            totalUsers: 0,
-            totalInstitutes: 0,
-            pendingInstitutes: 0,
-            totalReviews: 0,
-            totalEnquiries: 0,
-            totalCourses: 0,
-          },
-          featuredInstitutes: [], // CRITICAL: Ensure this is always an array
-          recentActivities: {
-            newUsers: [],
-            pendingInstitutes: [],
-            recentReviews: [],
-          },
+          analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0, totalEnquiries: 0, totalCourses: 0 },
+          featuredInstitutes: [],
+          recentActivities: { newUsers: [], pendingInstitutes: [], recentReviews: [] },
         };
       }
 
       const data = response.data;
-
-      // Create a safe response object with all required properties
       const safeResponse = {
-        analytics: {
-          totalUsers: 0,
-          totalInstitutes: 0,
-          pendingInstitutes: 0,
-          totalReviews: 0,
-          totalEnquiries: 0,
-          totalCourses: 0,
-        },
-        featuredInstitutes: [], // CRITICAL: Ensure this is always an array
+        analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0, totalEnquiries: 0, totalCourses: 0 },
+        featuredInstitutes: safeGetArray(data, ['featuredInstitutes', 'data.featuredInstitutes', 'data']),
         recentActivities: {
-          newUsers: [],
-          pendingInstitutes: [],
-          recentReviews: [],
+          newUsers: safeGetArray(data, ['recentActivities.newUsers', 'data.recentActivities.newUsers']),
+          pendingInstitutes: safeGetArray(data, ['recentActivities.pendingInstitutes', 'data.recentActivities.pendingInstitutes']),
+          recentReviews: safeGetArray(data, ['recentActivities.recentReviews', 'data.recentActivities.recentReviews']),
         },
       };
 
-      // Safely copy over analytics data if it exists
       if (data && data.analytics && typeof data.analytics === 'object') {
         safeResponse.analytics = {
           totalUsers: data.analytics.totalUsers ?? 0,
@@ -59,42 +69,13 @@ export const adminService = {
         };
       }
 
-      // CRITICAL: Safely copy over featured institutes if it exists and is an array
-      if (Array.isArray(data?.featuredInstitutes)) {
-        safeResponse.featuredInstitutes = data.featuredInstitutes;
-      } else if (data?.featuredInstitutes) {
-        console.warn('featuredInstitutes is not an array:', data.featuredInstitutes);
-      }
-
-      // Safely copy over recent activities if they exist
-      if (data && data.recentActivities && typeof data.recentActivities === 'object') {
-        safeResponse.recentActivities = {
-          newUsers: Array.isArray(data.recentActivities.newUsers) ? data.recentActivities.newUsers : [],
-          pendingInstitutes: Array.isArray(data.recentActivities.pendingInstitutes) ? data.recentActivities.pendingInstitutes : [],
-          recentReviews: Array.isArray(data.recentActivities.recentReviews) ? data.recentActivities.recentReviews : [],
-        };
-      }
-
       return safeResponse;
     } catch (err) {
       console.error("❌ Network or API call error fetching dashboard analytics:", err);
-      
-      // Return a safe, default structure
       return {
-        analytics: {
-          totalUsers: 0,
-          totalInstitutes: 0,
-          pendingInstitutes: 0,
-          totalReviews: 0,
-          totalEnquiries: 0,
-          totalCourses: 0,
-        },
-        featuredInstitutes: [], // CRITICAL: Ensure this is always an array
-        recentActivities: {
-          newUsers: [],
-          pendingInstitutes: [],
-          recentReviews: [],
-        },
+        analytics: { totalUsers: 0, totalInstitutes: 0, pendingInstitutes: 0, totalReviews: 0, totalEnquiries: 0, totalCourses: 0 },
+        featuredInstitutes: [],
+        recentActivities: { newUsers: [], pendingInstitutes: [], recentReviews: [] },
       };
     }
   },
@@ -103,18 +84,8 @@ export const adminService = {
   getPendingInstitutes: async () => {
     try {
       const response = await api.get('/admin/institutes/pending');
-      
-      // Check multiple possible response structures
-      if (Array.isArray(response?.data)) {
-        return response.data;
-      } else if (Array.isArray(response?.data?.institutes)) {
-        return response.data.institutes;
-      } else if (Array.isArray(response?.data?.data)) {
-        return response.data.data;
-      } else {
-        console.warn("Unexpected response structure for getPendingInstitutes:", response);
-        return [];
-      }
+      if (!response || !response.data) return [];
+      return safeGetArray(response.data, ['institutes', 'data', '']);
     } catch (err) {
       console.error("Error fetching pending institutes:", err);
       return [];
@@ -136,18 +107,8 @@ export const adminService = {
   getAllUsers: async () => {
     try {
       const response = await api.get('/admin/users');
-      
-      // Check multiple possible response structures
-      if (Array.isArray(response?.data)) {
-        return response.data;
-      } else if (Array.isArray(response?.data?.users)) {
-        return response.data.users;
-      } else if (Array.isArray(response?.data?.data)) {
-        return response.data.data;
-      } else {
-        console.warn("Unexpected response structure for getAllUsers:", response);
-        return [];
-      }
+      if (!response || !response.data) return [];
+      return safeGetArray(response.data, ['users', 'data', '']);
     } catch (err) {
       console.error("Error fetching users list:", err);
       return [];
