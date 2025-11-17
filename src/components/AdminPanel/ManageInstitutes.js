@@ -4,6 +4,7 @@ import { adminService } from '../../services/admin';
 const ManageInstitutes = () => {
   const [institutes, setInstitutes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchInstitutes();
@@ -11,15 +12,20 @@ const ManageInstitutes = () => {
 
   const fetchInstitutes = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const data = await adminService.getPendingInstitutes();
-      // FIX: Ensure institutes is always an array with multiple fallbacks
+      
+      // Ensure institutes is always an array with multiple fallbacks
       const institutesData = Array.isArray(data) ? data : 
                            data?.institutes ? data.institutes : 
                            data?.data ? data.data : [];
+      
       setInstitutes(institutesData);
     } catch (error) {
       console.error('Error fetching institutes:', error);
-      // FIX: Set empty array on error to prevent crashes
+      setError('Failed to fetch institutes. Please try again later.');
+      // Set empty array on error to prevent crashes
       setInstitutes([]);
     } finally {
       setLoading(false);
@@ -29,7 +35,7 @@ const ManageInstitutes = () => {
   const handleStatusUpdate = async (instituteId, status) => {
     try {
       await adminService.updateInstituteStatus(instituteId, status);
-      // FIX: Added array safety check before filtering
+      // Filter out the updated institute from the list
       setInstitutes(prevInstitutes => 
         Array.isArray(prevInstitutes) 
           ? prevInstitutes.filter(inst => inst._id !== instituteId)
@@ -39,6 +45,16 @@ const ManageInstitutes = () => {
     } catch (error) {
       console.error('Error updating institute status:', error);
       alert('Error updating institute status');
+    }
+  };
+
+  // Helper function to safely format dates
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      return 'Invalid date';
     }
   };
 
@@ -53,16 +69,21 @@ const ManageInstitutes = () => {
         <p>Approve or reject institute registration requests</p>
       </div>
 
+      {error && (
+        <div className="error-message">
+          {error}
+          <button onClick={fetchInstitutes} className="btn btn-primary">Retry</button>
+        </div>
+      )}
+
       <div className="institutes-list">
-        {/* FIX: Enhanced empty state check */}
-        {!institutes || !Array.isArray(institutes) || institutes.length === 0 ? (
+        {institutes.length === 0 ? (
           <div className="empty-state">
             <p>No institutes pending approval</p>
           </div>
         ) : (
-          // FIX: Added array safety check before mapping
-          Array.isArray(institutes) && institutes.map(institute => (
-            <div key={institute._id || institute.id} className="institute-card">
+          institutes.map(institute => (
+            <div key={institute._id} className="institute-card">
               <div className="institute-header">
                 <h3>{institute.name || 'Unnamed Institute'}</h3>
                 <span className={`status-badge ${institute.status || 'pending'}`}>
@@ -103,10 +124,7 @@ const ManageInstitutes = () => {
                 </div>
                 <div className="detail-row">
                   <span className="label">Registration Date:</span>
-                  <span className="value">
-                    {/* FIX: Added safety check for date */}
-                    {institute.createdAt ? new Date(institute.createdAt).toLocaleDateString() : 'Unknown date'}
-                  </span>
+                  <span className="value">{formatDate(institute.createdAt)}</span>
                 </div>
               </div>
 

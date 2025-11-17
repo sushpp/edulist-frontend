@@ -6,17 +6,13 @@ export const adminService = {
     try {
       const response = await api.get('/admin/dashboard');
       
-      // --- CRITICAL DEBUGGING STEP ---
-      // Log the ENTIRE response object from your API helper.
-      // This will show you the status, headers, and data body.
+      // Log the entire response for debugging
       console.log('Raw API Response from /admin/dashboard:', response);
 
       // Ensure `data` is at least an object if response.data is null/undefined
       const data = response?.data || {};
 
-      // --- STRUCTURE VALIDATION ---
-      // Add a warning if the expected 'analytics' object is missing.
-      // This helps you distinguish a network error (caught below) from a data structure error.
+      // Add a warning if the expected structure is missing
       if (!data || typeof data !== 'object' || !data.analytics) {
         console.warn("⚠️ API response is missing the expected 'analytics' property. Check your backend endpoint. Received data:", data);
       }
@@ -46,11 +42,9 @@ export const adminService = {
         },
       };
     } catch (err) {
-      // This block catches network errors (e.g., 404 Not Found, 500 Server Error)
-      // or errors thrown by your `api` helper.
       console.error("❌ Network or API call error fetching dashboard analytics:", err);
       
-      // Return a safe, default structure so the frontend doesn't crash.
+      // Return a safe, default structure
       return {
         analytics: {
           totalUsers: 0,
@@ -70,20 +64,29 @@ export const adminService = {
     }
   },
 
-  // Fetch pending institutes safely
+  // Fetch pending institutes with improved error handling
   getPendingInstitutes: async () => {
     try {
       const response = await api.get('/admin/institutes/pending');
-      return Array.isArray(response?.data?.institutes)
-        ? response.data.institutes
-        : [];
+      
+      // Check multiple possible response structures
+      if (Array.isArray(response?.data)) {
+        return response.data;
+      } else if (Array.isArray(response?.data?.institutes)) {
+        return response.data.institutes;
+      } else if (Array.isArray(response?.data?.data)) {
+        return response.data.data;
+      } else {
+        console.warn("Unexpected response structure for getPendingInstitutes:", response);
+        return [];
+      }
     } catch (err) {
       console.error("Error fetching pending institutes:", err);
       return [];
     }
   },
 
-  // Verify institute
+  // Verify institute with improved error handling
   verifyInstitute: async (instituteId) => {
     try {
       const response = await api.put(`/admin/institutes/${instituteId}/verify`);
@@ -94,23 +97,29 @@ export const adminService = {
     }
   },
 
-  // Fetch all users safely
-getAllUsers: async () => {
-  try {
-    const response = await api.get('/admin/users');
-    // IMPORTANT: Check if response.data.users is an array.
-    // The backend sends { success: true, users: [...] }
-    return Array.isArray(response?.data?.users)
-      ? response.data.users
-      : [];
-  } catch (err) {
-    console.error("Error fetching users list:", err);
-    // Always return an empty array on error to prevent .map() crashes
-    return [];
-  }
-},
+  // Fetch all users with improved error handling
+  getAllUsers: async () => {
+    try {
+      const response = await api.get('/admin/users');
+      
+      // Check multiple possible response structures
+      if (Array.isArray(response?.data)) {
+        return response.data;
+      } else if (Array.isArray(response?.data?.users)) {
+        return response.data.users;
+      } else if (Array.isArray(response?.data?.data)) {
+        return response.data.data;
+      } else {
+        console.warn("Unexpected response structure for getAllUsers:", response);
+        return [];
+      }
+    } catch (err) {
+      console.error("Error fetching users list:", err);
+      return [];
+    }
+  },
 
-  // Toggle user status safely
+  // Toggle user status with improved error handling
   toggleUserStatus: async (userId, isActive) => {
     try {
       const response = await api.put(`/admin/users/${userId}/status`, { isActive });
@@ -121,7 +130,7 @@ getAllUsers: async () => {
     }
   },
 
-  // Update institute status safely
+  // Update institute status with improved error handling
   updateInstituteStatus: async (instituteId, status) => {
     try {
       const response = await api.put(`/admin/institutes/${instituteId}/status`, { status });
