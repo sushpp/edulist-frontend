@@ -1,11 +1,47 @@
-import api from "../api/api";
+// src/services/institute.js
+import api from './api';
+
+// Helper function to safely extract and ensure an array
+const safeGetArray = (data, possiblePaths) => {
+  if (!data || typeof data !== 'object') {
+    console.warn('Data is not an object, cannot extract array:', data);
+    return [];
+  }
+
+  for (const path of possiblePaths) {
+    const value = path.split('.').reduce((obj, key) => obj && obj[key], data);
+    
+    if (Array.isArray(value)) {
+      return value;
+    }
+    
+    // Handle case where API returns a stringified array
+    if (typeof value === 'string') {
+      try {
+        const parsedValue = JSON.parse(value);
+        if (Array.isArray(parsedValue)) {
+          console.warn(`API returned a stringified array at path ${path}. Parsed successfully.`);
+          return parsedValue;
+        }
+      } catch (e) {
+        console.warn(`API returned a string at path ${path}, but it's not valid JSON.`, value);
+      }
+    }
+  }
+  
+  console.warn('Could not find an array in any of the expected paths:', possiblePaths, 'in data:', data);
+  return [];
+};
 
 export const instituteService = {
   getAllInstitutes: async (filters = {}) => {
     try {
       const response = await api.get("/institutes", { params: filters });
-      const institutes = response.data?.institutes;
-      return { institutes: Array.isArray(institutes) ? institutes : [] };
+      if (!response || !response.data) return { institutes: [] };
+      
+      // Use safeGetArray to find the institutes array in multiple possible locations
+      const institutes = safeGetArray(response.data, ['institutes', 'data', '']);
+      return { institutes };
     } catch (err) {
       console.error("Error fetching all institutes:", err);
       return { institutes: [] };
@@ -15,7 +51,7 @@ export const instituteService = {
   getInstituteById: async (id) => {
     try {
       const response = await api.get(`/institutes/${id}`);
-      return response.data?.institute || {};
+      return response.data?.institute || response.data || {};
     } catch (err) {
       console.error("Error fetching institute by ID:", err);
       return {};
@@ -25,13 +61,10 @@ export const instituteService = {
   getFeaturedInstitutes: async () => {
     try {
       const response = await api.get("/institutes/featured");
-      const featured = response.data?.institutes;
-      // Normalize: always return an array
-      return Array.isArray(featured)
-        ? featured
-        : featured
-        ? [featured]
-        : [];
+      if (!response || !response.data) return [];
+      
+      // Use safeGetArray to find the featured institutes array
+      return safeGetArray(response.data, ['institutes', 'data', '']);
     } catch (err) {
       console.error("Error fetching featured institutes:", err);
       return [];
@@ -41,7 +74,7 @@ export const instituteService = {
   getInstituteProfile: async () => {
     try {
       const response = await api.get("/institutes/profile");
-      return response.data?.institute || {};
+      return response.data?.institute || response.data || {};
     } catch (err) {
       console.error("Error fetching institute profile:", err);
       return {};
@@ -51,7 +84,7 @@ export const instituteService = {
   updateInstitute: async (data) => {
     try {
       const response = await api.put("/institutes/profile", data);
-      return response.data?.institute || {};
+      return response.data?.institute || response.data || {};
     } catch (err) {
       console.error("Error updating institute profile:", err);
       return {};
@@ -61,8 +94,10 @@ export const instituteService = {
   getPendingInstitutes: async () => {
     try {
       const response = await api.get("/institutes/admin/pending");
-      const pending = response.data?.institutes;
-      return Array.isArray(pending) ? pending : [];
+      if (!response || !response.data) return [];
+      
+      // Use safeGetArray to find the pending institutes array
+      return safeGetArray(response.data, ['institutes', 'data', '']);
     } catch (err) {
       console.error("Error fetching pending institutes:", err);
       return [];
@@ -72,10 +107,10 @@ export const instituteService = {
   updateInstituteStatus: async (instituteId, status) => {
     try {
       const response = await api.put(`/institutes/admin/${instituteId}/status`, { status });
-      return response.data || {};
+      return response.data || { success: false };
     } catch (err) {
       console.error("Error updating institute status:", err);
-      return {};
+      return { success: false };
     }
-  }
+  },
 };
