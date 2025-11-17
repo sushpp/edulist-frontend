@@ -1,21 +1,33 @@
 import api from './api';
 
 export const adminService = {
-  // Fetch dashboard analytics with defaults
+  // Fetch dashboard analytics with enhanced error handling
   getDashboardAnalytics: async () => {
     try {
       const response = await api.get('/admin/dashboard');
       
-      // Log the entire response for debugging
-      console.log('Raw API Response from /admin/dashboard:', response);
-
-      // Ensure `data` is at least an object if response.data is null/undefined
-      const data = response?.data || {};
-
-      // Add a warning if the expected structure is missing
-      if (!data || typeof data !== 'object' || !data.analytics) {
-        console.warn("⚠️ API response is missing the expected 'analytics' property. Check your backend endpoint. Received data:", data);
+      // If the entire response is missing or invalid
+      if (!response || !response.data) {
+        console.warn("API response for dashboard is missing or null. Returning default structure.");
+        return {
+          analytics: {
+            totalUsers: 0,
+            totalInstitutes: 0,
+            pendingInstitutes: 0,
+            totalReviews: 0,
+            totalEnquiries: 0,
+            totalCourses: 0,
+          },
+          featuredInstitutes: [],
+          recentActivities: {
+            newUsers: [],
+            pendingInstitutes: [],
+            recentReviews: [],
+          },
+        };
       }
+
+      const data = response.data;
 
       return {
         analytics: {
@@ -26,6 +38,7 @@ export const adminService = {
           totalEnquiries: data?.analytics?.totalEnquiries ?? 0,
           totalCourses: data?.analytics?.totalCourses ?? 0,
         },
+        // Ensure featuredInstitutes is always an array
         featuredInstitutes: Array.isArray(data?.featuredInstitutes)
           ? data.featuredInstitutes
           : [],
