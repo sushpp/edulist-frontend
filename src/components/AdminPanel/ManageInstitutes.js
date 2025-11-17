@@ -5,6 +5,7 @@ const ManageInstitutes = () => {
   const [institutes, setInstitutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
 
   useEffect(() => {
     fetchInstitutes();
@@ -16,7 +17,7 @@ const ManageInstitutes = () => {
       setError(null);
       const data = await adminService.getPendingInstitutes();
       
-      // Ensure institutes is always an array with multiple fallbacks
+      // Enhanced safety check with multiple fallbacks
       const institutesData = Array.isArray(data) ? data : 
                            data?.institutes ? data.institutes : 
                            data?.data ? data.data : [];
@@ -34,17 +35,25 @@ const ManageInstitutes = () => {
 
   const handleStatusUpdate = async (instituteId, status) => {
     try {
+      // Set loading state for this specific action
+      setActionLoading(prev => ({ ...prev, [instituteId]: true }));
+      
       await adminService.updateInstituteStatus(instituteId, status);
+      
       // Filter out the updated institute from the list
       setInstitutes(prevInstitutes => 
         Array.isArray(prevInstitutes) 
           ? prevInstitutes.filter(inst => inst._id !== instituteId)
           : []
       );
+      
       alert(`Institute ${status} successfully`);
     } catch (error) {
       console.error('Error updating institute status:', error);
       alert('Error updating institute status');
+    } finally {
+      // Clear loading state for this action
+      setActionLoading(prev => ({ ...prev, [instituteId]: false }));
     }
   };
 
@@ -77,13 +86,14 @@ const ManageInstitutes = () => {
       )}
 
       <div className="institutes-list">
-        {institutes.length === 0 ? (
+        {/* Enhanced safety check before rendering */}
+        {!institutes || !Array.isArray(institutes) || institutes.length === 0 ? (
           <div className="empty-state">
             <p>No institutes pending approval</p>
           </div>
         ) : (
           institutes.map(institute => (
-            <div key={institute._id} className="institute-card">
+            <div key={institute._id || institute.id || Math.random().toString(36).substr(2, 9)} className="institute-card">
               <div className="institute-header">
                 <h3>{institute.name || 'Unnamed Institute'}</h3>
                 <span className={`status-badge ${institute.status || 'pending'}`}>
@@ -132,14 +142,16 @@ const ManageInstitutes = () => {
                 <button
                   onClick={() => handleStatusUpdate(institute._id, 'approved')}
                   className="btn btn-success"
+                  disabled={actionLoading[institute._id]}
                 >
-                  Approve Institute
+                  {actionLoading[institute._id] ? 'Processing...' : 'Approve Institute'}
                 </button>
                 <button
                   onClick={() => handleStatusUpdate(institute._id, 'rejected')}
                   className="btn btn-danger"
+                  disabled={actionLoading[institute._id]}
                 >
-                  Reject Institute
+                  {actionLoading[institute._id] ? 'Processing...' : 'Reject Institute'}
                 </button>
               </div>
             </div>

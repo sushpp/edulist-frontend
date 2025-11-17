@@ -4,6 +4,10 @@ import { adminService } from '../../services/admin';
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage] = useState(10);
 
   useEffect(() => {
     fetchUsers();
@@ -11,15 +15,18 @@ const ManageUsers = () => {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const data = await adminService.getAllUsers();
-      // FIX: Ensure users is always an array with multiple fallbacks
+      // Ensure users is always an array with multiple fallbacks
       const usersData = Array.isArray(data) ? data : 
                        data?.users ? data.users : 
                        data?.data ? data.data : [];
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
-      // FIX: Set empty array on error to prevent crashes
+      setError('Failed to fetch users. Please try again later.');
+      // Set empty array on error to prevent crashes
       setUsers([]);
     } finally {
       setLoading(false);
@@ -29,7 +36,7 @@ const ManageUsers = () => {
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       await adminService.toggleUserStatus(userId, !currentStatus);
-      // FIX: Added array safety check before mapping
+      // Added array safety check before mapping
       setUsers(prevUsers => 
         Array.isArray(prevUsers) 
           ? prevUsers.map(user => 
@@ -46,6 +53,22 @@ const ManageUsers = () => {
     }
   };
 
+  // Filter users based on search term
+  const filteredUsers = Array.isArray(users) 
+    ? users.filter(user => 
+        (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+    : [];
+
+  // Pagination logic
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const paginate = pageNumber => setCurrentPage(pageNumber);
+
   if (loading) {
     return <div className="loading">Loading users...</div>;
   }
@@ -55,6 +78,26 @@ const ManageUsers = () => {
       <div className="page-header">
         <h2>Manage Users</h2>
         <p>Total Users: {Array.isArray(users) ? users.length : 0}</p>
+      </div>
+
+      {error && (
+        <div className="error-message">
+          {error}
+          <button onClick={fetchUsers} className="btn btn-primary">Retry</button>
+        </div>
+      )}
+
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset to first page when searching
+          }}
+          className="search-input"
+        />
       </div>
 
       <div className="users-table">
@@ -71,13 +114,13 @@ const ManageUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {/* FIX: Added array safety check before mapping */}
-            {Array.isArray(users) && users.map(user => (
+            {/* Added array safety check before mapping */}
+            {Array.isArray(currentUsers) && currentUsers.map(user => (
               <tr key={user._id || user.id}>
                 <td>
                   <div className="user-info">
                     <div className="user-avatar">
-                      {/* FIX: Added safety check for user name */}
+                      {/* Added safety check for user name */}
                       {user.name?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     {user.name || 'Unknown User'}
@@ -96,7 +139,7 @@ const ManageUsers = () => {
                   </span>
                 </td>
                 <td>
-                  {/* FIX: Added safety check for date */}
+                  {/* Added safety check for date */}
                   {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown date'}
                 </td>
                 <td>
@@ -112,13 +155,36 @@ const ManageUsers = () => {
           </tbody>
         </table>
 
-        {/* FIX: Added empty state */}
-        {(!users || !Array.isArray(users) || users.length === 0) && (
+        {/* Added empty state */}
+        {(!currentUsers || !Array.isArray(currentUsers) || currentUsers.length === 0) && (
           <div className="empty-state">
             <p>No users found</p>
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button 
+            onClick={() => paginate(currentPage - 1)} 
+            disabled={currentPage === 1}
+            className="btn btn-secondary"
+          >
+            Previous
+          </button>
+          <span className="page-info">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button 
+            onClick={() => paginate(currentPage + 1)} 
+            disabled={currentPage === totalPages}
+            className="btn btn-secondary"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

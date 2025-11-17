@@ -18,7 +18,7 @@ export const adminService = {
             totalEnquiries: 0,
             totalCourses: 0,
           },
-          featuredInstitutes: [],
+          featuredInstitutes: [], // CRITICAL: Ensure this is always an array
           recentActivities: {
             newUsers: [],
             pendingInstitutes: [],
@@ -29,31 +29,53 @@ export const adminService = {
 
       const data = response.data;
 
-      return {
+      // Create a safe response object with all required properties
+      const safeResponse = {
         analytics: {
-          totalUsers: data?.analytics?.totalUsers ?? 0,
-          totalInstitutes: data?.analytics?.totalInstitutes ?? 0,
-          pendingInstitutes: data?.analytics?.pendingInstitutes ?? 0,
-          totalReviews: data?.analytics?.totalReviews ?? 0,
-          totalEnquiries: data?.analytics?.totalEnquiries ?? 0,
-          totalCourses: data?.analytics?.totalCourses ?? 0,
+          totalUsers: 0,
+          totalInstitutes: 0,
+          pendingInstitutes: 0,
+          totalReviews: 0,
+          totalEnquiries: 0,
+          totalCourses: 0,
         },
-        // Ensure featuredInstitutes is always an array
-        featuredInstitutes: Array.isArray(data?.featuredInstitutes)
-          ? data.featuredInstitutes
-          : [],
+        featuredInstitutes: [], // CRITICAL: Ensure this is always an array
         recentActivities: {
-          newUsers: Array.isArray(data?.recentActivities?.newUsers)
-            ? data.recentActivities.newUsers
-            : [],
-          pendingInstitutes: Array.isArray(data?.recentActivities?.pendingInstitutes)
-            ? data.recentActivities.pendingInstitutes
-            : [],
-          recentReviews: Array.isArray(data?.recentActivities?.recentReviews)
-            ? data.recentActivities.recentReviews
-            : [],
+          newUsers: [],
+          pendingInstitutes: [],
+          recentReviews: [],
         },
       };
+
+      // Safely copy over analytics data if it exists
+      if (data && data.analytics && typeof data.analytics === 'object') {
+        safeResponse.analytics = {
+          totalUsers: data.analytics.totalUsers ?? 0,
+          totalInstitutes: data.analytics.totalInstitutes ?? 0,
+          pendingInstitutes: data.analytics.pendingInstitutes ?? 0,
+          totalReviews: data.analytics.totalReviews ?? 0,
+          totalEnquiries: data.analytics.totalEnquiries ?? 0,
+          totalCourses: data.analytics.totalCourses ?? 0,
+        };
+      }
+
+      // CRITICAL: Safely copy over featured institutes if it exists and is an array
+      if (Array.isArray(data?.featuredInstitutes)) {
+        safeResponse.featuredInstitutes = data.featuredInstitutes;
+      } else if (data?.featuredInstitutes) {
+        console.warn('featuredInstitutes is not an array:', data.featuredInstitutes);
+      }
+
+      // Safely copy over recent activities if they exist
+      if (data && data.recentActivities && typeof data.recentActivities === 'object') {
+        safeResponse.recentActivities = {
+          newUsers: Array.isArray(data.recentActivities.newUsers) ? data.recentActivities.newUsers : [],
+          pendingInstitutes: Array.isArray(data.recentActivities.pendingInstitutes) ? data.recentActivities.pendingInstitutes : [],
+          recentReviews: Array.isArray(data.recentActivities.recentReviews) ? data.recentActivities.recentReviews : [],
+        };
+      }
+
+      return safeResponse;
     } catch (err) {
       console.error("❌ Network or API call error fetching dashboard analytics:", err);
       
@@ -67,7 +89,7 @@ export const adminService = {
           totalEnquiries: 0,
           totalCourses: 0,
         },
-        featuredInstitutes: [],
+        featuredInstitutes: [], // CRITICAL: Ensure this is always an array
         recentActivities: {
           newUsers: [],
           pendingInstitutes: [],
