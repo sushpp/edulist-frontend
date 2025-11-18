@@ -14,7 +14,6 @@ const ProfileManagement = () => {
     address: '',
     city: '',
     state: '',
-    // FIX 1: Changed contactInfo to an object to match the backend model
     contactInfo: { phone: '', email: '' },
     website: '',
     description: '',
@@ -38,7 +37,6 @@ const ProfileManagement = () => {
           address: instituteData.address || '',
           city: instituteData.city || '',
           state: instituteData.state || '',
-          // FIX 2: Correctly populate the contactInfo object
           contactInfo: {
             phone: instituteData.contactInfo?.phone || '',
             email: instituteData.contactInfo?.email || '',
@@ -46,7 +44,6 @@ const ProfileManagement = () => {
           website: instituteData.website || '',
           description: instituteData.description || '',
         });
-        // FIX 3: Use correct path for logo and environment variable
         if (instituteData.media && instituteData.media.logo) {
           setLogoPreview(`${process.env.REACT_APP_API_URL}/uploads/${instituteData.media.logo}`);
         }
@@ -58,7 +55,6 @@ const ProfileManagement = () => {
     fetchInstitute();
   }, []);
 
-  // FIX 4: Update onChange handler to support nested objects like contactInfo.phone
   const onChange = e => {
     const { name, value } = e.target;
     if (name.includes('.')) {
@@ -95,7 +91,6 @@ const ProfileManagement = () => {
     try {
       const formDataToSend = new FormData();
       Object.keys(formData).forEach(key => {
-        // FIX 5: Stringify objects before sending them as form data
         if (typeof formData[key] === 'object' && key !== 'logoFile') {
           formDataToSend.append(key, JSON.stringify(formData[key]));
         } else {
@@ -133,7 +128,6 @@ const ProfileManagement = () => {
         address: institute.address || '',
         city: institute.city || '',
         state: institute.state || '',
-        // FIX 6: Correctly populate contactInfo when toggling edit mode
         contactInfo: {
           phone: institute.contactInfo?.phone || '',
           email: institute.contactInfo?.email || '',
@@ -141,7 +135,6 @@ const ProfileManagement = () => {
         website: institute.website || '',
         description: institute.description || '',
       });
-      // FIX 7: Reset logo preview to current logo
       if (institute.media && institute.media.logo) {
         setLogoPreview(`${process.env.REACT_APP_API_URL}/uploads/${institute.media.logo}`);
       }
@@ -286,7 +279,6 @@ const ProfileManagement = () => {
               </div>
             </div>
             
-            {/* FIX 8: Replace single contact input with separate phone and email inputs */}
             <div className="form-row">
               <div className="form-col">
                 <div className="form-group">

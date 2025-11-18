@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'; // FIX 1: Added useContext import
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import ReviewForm from './ReviewForm';
@@ -18,11 +18,9 @@ const InstituteDetail = () => {
   useEffect(() => {
     const fetchInstituteData = async () => {
       try {
-        // Fetch institute details
         const instituteRes = await api.get(`/institutes/${id}`);
         setInstitute(instituteRes.data);
         
-        // Fetch institute reviews
         const reviewsRes = await api.get(`/reviews/${id}`);
         setReviews(reviewsRes.data);
       } catch (err) {
@@ -37,7 +35,6 @@ const InstituteDetail = () => {
 
   const handleReviewSubmit = (reviewData) => {
     setShowReviewForm(false);
-    // Refresh reviews
     api.get(`/reviews/${id}`).then(res => setReviews(res.data));
   };
 
@@ -53,7 +50,6 @@ const InstituteDetail = () => {
     return <div className="error">Institute not found</div>;
   }
 
-  // Calculate average rating
   const avgRating = reviews.length > 0
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
     : 0;
@@ -63,7 +59,6 @@ const InstituteDetail = () => {
       <div className="institute-header">
         <div className="institute-hero">
           <div className="institute-logo">
-            {/* FIX 2: Use environment variable and correct path for logo */}
             {institute.media && institute.media.logo ? (
               <img src={`${process.env.REACT_APP_API_URL}/uploads/${institute.media.logo}`} alt={institute.name} />
             ) : (
@@ -124,7 +119,6 @@ const InstituteDetail = () => {
             <h2>Contact Information</h2>
             <div className="contact-info">
               <p><i className="fas fa-map-marker-alt"></i> {institute.address}, {institute.city}, {institute.state}</p>
-              {/* FIX 3: Correctly display phone and email from the contactInfo object */}
               {institute.contactInfo && (
                 <>
                   <p><i className="fas fa-phone"></i> {institute.contactInfo.phone}</p>
@@ -137,7 +131,6 @@ const InstituteDetail = () => {
             </div>
           </div>
           
-          {/* FIX 4: Use correct path for gallery images */}
           {institute.media && institute.media.images && institute.media.images.length > 0 && (
             <div className="content-section">
               <h2>Gallery</h2>
@@ -174,7 +167,6 @@ const InstituteDetail = () => {
                 {institute.courses.map(course => (
                   <div key={course._id} className="course-item">
                     <div className="course-image">
-                      {/* FIX 5: Use environment variable for course image URL */}
                       {course.image ? (
                         <img src={`${process.env.REACT_APP_API_URL}/uploads/${course.image}`} alt={course.title} />
                       ) : (
