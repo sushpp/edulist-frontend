@@ -1,3 +1,5 @@
+// src/components/Auth/Register.js
+
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -5,58 +7,54 @@ import './Auth.css';
 
 const Register = () => {
   const [formData, setFormData] = useState({
+    // User fields
     name: '',
     email: '',
     password: '',
-    role: 'user',
-    phone: '',
-    // Institute fields
+    password2: '',
+    role: 'user', // Default role
+    
+    // Institute fields - will be sent if role is 'institute'
     instituteName: '',
     category: '',
     affiliation: '',
     address: '',
     city: '',
     state: '',
-    contactInfo: '',
+    phone: '',
     website: '',
     description: '',
   });
+
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
   
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const {
-    name,
-    email,
-    password,
-    role,
-    phone,
-    instituteName,
-    category,
-    affiliation,
-    address,
-    city,
-    state,
-    contactInfo,
-    website,
-    description,
-  } = formData;
-
-  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const onChange = e => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const onSubmit = async e => {
     e.preventDefault();
     setLoading(true);
     setAlert(null);
 
+    if (formData.password !== formData.password2) {
+      setAlert('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
     try {
+      // We will send the entire formData object.
+      // The backend will pick what it needs.
       await register(formData);
       setAlert({ type: 'success', message: 'Registration successful! Please login.' });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setAlert({ type: 'danger', message: err.msg || 'Registration failed' });
+      setAlert({ type: 'danger', message: err.message || 'Registration failed' });
     } finally {
       setLoading(false);
     }
@@ -82,7 +80,7 @@ const Register = () => {
             <select
               id="role"
               name="role"
-              value={role}
+              value={formData.role}
               onChange={onChange}
               required
             >
@@ -97,19 +95,19 @@ const Register = () => {
               type="text"
               id="name"
               name="name"
-              value={name}
+              value={formData.name}
               onChange={onChange}
               required
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email Address</label>
             <input
               type="email"
               id="email"
               name="email"
-              value={email}
+              value={formData.email}
               onChange={onChange}
               required
             />
@@ -121,7 +119,7 @@ const Register = () => {
               type="password"
               id="password"
               name="password"
-              value={password}
+              value={formData.password}
               onChange={onChange}
               required
               minLength="6"
@@ -129,17 +127,20 @@ const Register = () => {
           </div>
           
           <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
+            <label htmlFor="password2">Confirm Password</label>
             <input
-              type="text"
-              id="phone"
-              name="phone"
-              value={phone}
+              type="password"
+              id="password2"
+              name="password2"
+              value={formData.password2}
               onChange={onChange}
+              required
+              minLength="6"
             />
           </div>
           
-          {role === 'institute' && (
+          {/* --- CONDITIONAL INSTITUTE FIELDS --- */}
+          {formData.role === 'institute' && (
             <>
               <h3 className="section-title">Institute Details</h3>
               
@@ -149,7 +150,7 @@ const Register = () => {
                   type="text"
                   id="instituteName"
                   name="instituteName"
-                  value={instituteName}
+                  value={formData.instituteName}
                   onChange={onChange}
                   required
                 />
@@ -160,7 +161,7 @@ const Register = () => {
                 <select
                   id="category"
                   name="category"
-                  value={category}
+                  value={formData.category}
                   onChange={onChange}
                   required
                 >
@@ -181,7 +182,7 @@ const Register = () => {
                   type="text"
                   id="affiliation"
                   name="affiliation"
-                  value={affiliation}
+                  value={formData.affiliation}
                   onChange={onChange}
                 />
               </div>
@@ -192,7 +193,7 @@ const Register = () => {
                   type="text"
                   id="address"
                   name="address"
-                  value={address}
+                  value={formData.address}
                   onChange={onChange}
                   required
                 />
@@ -206,7 +207,7 @@ const Register = () => {
                       type="text"
                       id="city"
                       name="city"
-                      value={city}
+                      value={formData.city}
                       onChange={onChange}
                       required
                     />
@@ -220,7 +221,7 @@ const Register = () => {
                       type="text"
                       id="state"
                       name="state"
-                      value={state}
+                      value={formData.state}
                       onChange={onChange}
                       required
                     />
@@ -229,12 +230,12 @@ const Register = () => {
               </div>
               
               <div className="form-group">
-                <label htmlFor="contactInfo">Contact Information</label>
+                <label htmlFor="phone">Phone Number</label>
                 <input
                   type="text"
-                  id="contactInfo"
-                  name="contactInfo"
-                  value={contactInfo}
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
                   onChange={onChange}
                   required
                 />
@@ -246,7 +247,7 @@ const Register = () => {
                   type="text"
                   id="website"
                   name="website"
-                  value={website}
+                  value={formData.website}
                   onChange={onChange}
                 />
               </div>
@@ -256,7 +257,7 @@ const Register = () => {
                 <textarea
                   id="description"
                   name="description"
-                  value={description}
+                  value={formData.description}
                   onChange={onChange}
                   rows="4"
                 ></textarea>
@@ -264,11 +265,7 @@ const Register = () => {
             </>
           )}
           
-          <button
-            type="submit"
-            className="btn btn-primary btn-block"
-            disabled={loading}
-          >
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Loading...' : 'Register'}
           </button>
         </form>
