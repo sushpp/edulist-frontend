@@ -149,8 +149,12 @@ const InstituteList = () => {
             {filteredInstitutes.map(institute => (
               <div key={institute._id} className="institute-card">
                 <div className="institute-image">
-                  {institute.logo ? (
-                    <img src={`http://localhost:5000/uploads/${institute.logo}`} alt={institute.name} />
+                  {/* --- KEY FIX IS HERE --- */}
+                  {/* 1. Use the environment variable for the base URL */}
+                  {/* 2. Access the logo via institute.media.logo */}
+                  {/* 3. Add checks to prevent errors if data is missing */}
+                  {institute.media && institute.media.logo ? (
+                    <img src={`${process.env.REACT_APP_API_URL}/uploads/${institute.media.logo}`} alt={institute.name} />
                   ) : (
                     <div className="placeholder-image">
                       <i className="fas fa-university"></i>
