@@ -7,7 +7,7 @@ import api from '../services/api';
 // Create context
 const AuthContext = createContext();
 
-// Custom hook to use the context
+// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post('/auth/login', { email, password });
       
-      const { token, user } = res.data; // Backend now sends both token and user
+      const { token, user } = res.data; // Backend sends both token and user
 
       // Store token and user in state and localStorage
       localStorage.setItem('token', token);
@@ -70,8 +70,9 @@ export const AuthProvider = ({ children }) => {
   const register = async (formData) => {
     try {
       const res = await api.post('/auth/register', formData);
-      const { token, user } = res.data;
       
+      const { token, user } = res.data; // Backend sends both token and user
+
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
@@ -79,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Registration failed:', error.response?.data);
+      // Re-throw the error to be caught by the registration form
       throw error.response?.data || { message: 'An unknown error occurred' };
     }
   };

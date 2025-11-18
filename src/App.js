@@ -1,7 +1,8 @@
 // src/App.js
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext'; // Using the new hook
+import { useAuth } from './context/AuthContext'; // Using the new, simpler hook
 
 // === IMPORT ALL YOUR COMPONENTS HERE ===
 import Home from './components/Home/Home';
@@ -24,6 +25,7 @@ import AdminDashboard from './components/AdminPanel/AdminDashboard';
 import ManageInstitutes from './components/AdminPanel/ManageInstitutes';
 import ManageUsers from './components/AdminPanel/ManageUsers';
 import AnalyticsDashboard from './components/AdminPanel/AdminDashboard';
+import CreateInstituteProfile from './components/InstituteDashboard/CreateInstituteProfile'; // Import the new component
 import Header from './components/Common/Header';
 import Footer from './components/Common/Footer';
 
@@ -74,6 +76,8 @@ function App() {
               <Route path="/institute/facilities" element={<Facilities />} />
               <Route path="/institute/enquiries" element={<InstituteEnquiries />} />
               <Route path="/institute/reviews" element={<InstituteReviews />} />
+              {/* --- ADD THIS NEW ROUTE --- */}
+              <Route path="/institute/create-profile" element={<CreateInstituteProfile />} />
             </>
           )}
           
