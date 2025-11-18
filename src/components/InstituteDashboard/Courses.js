@@ -101,7 +101,8 @@ const Courses = () => {
       fees: course.fees,
     });
     if (course.image) {
-      setImagePreview(`http://localhost:5000/uploads/${course.image}`);
+      // FIX 1: Use environment variable for the image URL
+      setImagePreview(`${process.env.REACT_APP_API_URL}/uploads/${course.image}`);
     }
     setShowAddForm(true);
   };
@@ -273,7 +274,8 @@ const Courses = () => {
                     <td>
                       {course.image ? (
                         <img 
-                          src={`http://localhost:5000/uploads/${course.image}`} 
+                          // FIX 2: Use environment variable for the image URL
+                          src={`${process.env.REACT_APP_API_URL}/uploads/${course.image}`} 
                           alt={course.title}
                           className="table-image"
                         />

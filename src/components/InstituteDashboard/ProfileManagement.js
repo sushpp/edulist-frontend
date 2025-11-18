@@ -14,7 +14,8 @@ const ProfileManagement = () => {
     address: '',
     city: '',
     state: '',
-    contactInfo: '',
+    // FIX 1: Changed contactInfo to an object to match the backend model
+    contactInfo: { phone: '', email: '' },
     website: '',
     description: '',
   });
@@ -37,12 +38,17 @@ const ProfileManagement = () => {
           address: instituteData.address || '',
           city: instituteData.city || '',
           state: instituteData.state || '',
-          contactInfo: instituteData.contactInfo || '',
+          // FIX 2: Correctly populate the contactInfo object
+          contactInfo: {
+            phone: instituteData.contactInfo?.phone || '',
+            email: instituteData.contactInfo?.email || '',
+          },
           website: instituteData.website || '',
           description: instituteData.description || '',
         });
-        if (instituteData.logo) {
-          setLogoPreview(`http://localhost:5000/uploads/${instituteData.logo}`);
+        // FIX 3: Use correct path for logo and environment variable
+        if (instituteData.media && instituteData.media.logo) {
+          setLogoPreview(`${process.env.REACT_APP_API_URL}/uploads/${instituteData.media.logo}`);
         }
       } catch (err) {
         console.error(err);
@@ -52,7 +58,22 @@ const ProfileManagement = () => {
     fetchInstitute();
   }, []);
 
-  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+  // FIX 4: Update onChange handler to support nested objects like contactInfo.phone
+  const onChange = e => {
+    const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
 
   const onLogoChange = e => {
     const file = e.target.files[0];
@@ -74,7 +95,12 @@ const ProfileManagement = () => {
     try {
       const formDataToSend = new FormData();
       Object.keys(formData).forEach(key => {
-        formDataToSend.append(key, formData[key]);
+        // FIX 5: Stringify objects before sending them as form data
+        if (typeof formData[key] === 'object' && key !== 'logoFile') {
+          formDataToSend.append(key, JSON.stringify(formData[key]));
+        } else {
+          formDataToSend.append(key, formData[key]);
+        }
       });
       
       if (logoFile) {
@@ -91,7 +117,7 @@ const ProfileManagement = () => {
       setAlert({ type: 'success', message: 'Profile updated successfully!' });
       setEditMode(false);
     } catch (err) {
-      setAlert({ type: 'danger', message: err.response?.data?.msg || 'Failed to update profile' });
+      setAlert({ type: 'danger', message: err.response?.data?.message || 'Failed to update profile' });
     } finally {
       setLoading(false);
     }
@@ -107,10 +133,18 @@ const ProfileManagement = () => {
         address: institute.address || '',
         city: institute.city || '',
         state: institute.state || '',
-        contactInfo: institute.contactInfo || '',
+        // FIX 6: Correctly populate contactInfo when toggling edit mode
+        contactInfo: {
+          phone: institute.contactInfo?.phone || '',
+          email: institute.contactInfo?.email || '',
+        },
         website: institute.website || '',
         description: institute.description || '',
       });
+      // FIX 7: Reset logo preview to current logo
+      if (institute.media && institute.media.logo) {
+        setLogoPreview(`${process.env.REACT_APP_API_URL}/uploads/${institute.media.logo}`);
+      }
     }
   };
 
@@ -252,17 +286,36 @@ const ProfileManagement = () => {
               </div>
             </div>
             
-            <div className="form-group">
-              <label htmlFor="contactInfo">Contact Information</label>
-              <input
-                type="text"
-                id="contactInfo"
-                name="contactInfo"
-                value={formData.contactInfo}
-                onChange={onChange}
-                disabled={!editMode}
-                required
-              />
+            {/* FIX 8: Replace single contact input with separate phone and email inputs */}
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label htmlFor="contactInfo.phone">Phone Number</label>
+                  <input
+                    type="text"
+                    id="contactInfo.phone"
+                    name="contactInfo.phone"
+                    value={formData.contactInfo.phone}
+                    onChange={onChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-col">
+                <div className="form-group">
+                  <label htmlFor="contactInfo.email">Email Address</label>
+                  <input
+                    type="email"
+                    id="contactInfo.email"
+                    name="contactInfo.email"
+                    value={formData.contactInfo.email}
+                    onChange={onChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </div>
+              </div>
             </div>
             
             <div className="form-group">
