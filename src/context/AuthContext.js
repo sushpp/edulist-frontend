@@ -1,3 +1,5 @@
+// context/AuthContext.js
+
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
@@ -5,7 +7,7 @@ import api from '../services/api';
 const initialState = {
   isAuthenticated: false,
   user: null,
-  token: localStorage.getItem('token'),
+  token: localStorage.getItem('token'), // Get token from storage on load
   loading: true,
 };
 
@@ -27,9 +29,8 @@ const authReducer = (state, action) => {
       localStorage.setItem('token', action.payload.token);
       return {
         ...state,
-        token: action.payload.token,
+        ...action.payload, // Spreads token, user, isAuthenticated, etc.
         isAuthenticated: true,
-        user: action.payload.user,
         loading: false,
       };
     case 'AUTH_ERROR':
@@ -65,12 +66,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Load user
+  // Load user from server
   // We wrap this in useCallback to prevent it from being recreated on every render,
   // which would cause the useEffect below to run in an infinite loop.
   const loadUser = useCallback(async () => {
-    // IMPORTANT: Read token directly from localStorage here to avoid stale closure issues.
-    // If we relied on `state.token`, it might be from the initial render and be `undefined`.
     const token = localStorage.getItem('token');
 
     if (token) {
@@ -81,12 +80,14 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const res = await api.get('/auth');
+      // --- FIX: Call the correct endpoint ---
+      const res = await api.get('/auth/me');
       dispatch({
         type: 'USER_LOADED',
-        payload: res.data,
+        payload: res.data.data, // The getMe response has { success: true, data: user }
       });
     } catch (err) {
+      console.error('Failed to load user:', err.response?.data);
       dispatch({
         type: 'AUTH_ERROR',
       });
@@ -100,16 +101,18 @@ export const AuthProvider = ({ children }) => {
       
       dispatch({
         type: 'REGISTER_SUCCESS',
-        payload: res.data,
+        payload: res.data, // res.data is { success: true, token: ..., user: ... }
       });
       
       return res.data;
     } catch (err) {
+      console.error('Registration error:', err.response?.data);
       dispatch({
         type: 'AUTH_ERROR',
+        payload: err.response?.data,
       });
       
-      throw err.response.data;
+      throw err.response?.data;
     }
   };
 
@@ -120,16 +123,18 @@ export const AuthProvider = ({ children }) => {
       
       dispatch({
         type: 'LOGIN_SUCCESS',
-        payload: res.data,
+        payload: res.data, // res.data is { success: true, token: ..., user: ... }
       });
       
       return res.data;
     } catch (err) {
+      console.error('Login error:', err.response?.data);
       dispatch({
         type: 'AUTH_ERROR',
+        payload: err.response?.data,
       });
       
-      throw err.response.data;
+      throw err.response?.data;
     }
   };
 
@@ -140,11 +145,16 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  // This effect runs only once when the component mounts.
-  // It will call the stable `loadUser` function.
+  // This effect runs only once when the provider mounts.
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  // Update token header whenever state.token changes
+  useEffect(() => {
+    setAuthToken(state.token);
+  }, [state.token]);
+
 
   const value = {
     ...state,
@@ -172,8 +182,5 @@ export const useAuth = () => {
   
   return context;
 };
-
-// Export the context itself for any rare cases it might be needed directly
-export { AuthContext };
 
 export default AuthContext;
