@@ -1,7 +1,7 @@
 // src/App.js
-import React, { useContext } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/AuthContext'; // Using the new hook
 
 // === IMPORT ALL YOUR COMPONENTS HERE ===
 import Home from './components/Home/Home';
@@ -23,13 +23,14 @@ import InstituteReviews from './components/InstituteDashboard/Reviews';
 import AdminDashboard from './components/AdminPanel/AdminDashboard';
 import ManageInstitutes from './components/AdminPanel/ManageInstitutes';
 import ManageUsers from './components/AdminPanel/ManageUsers';
-import AnalyticsDashboard from './components/AdminPanel/AnalyticsDashboard';
+import AnalyticsDashboard from './components/AdminPanel/AdminDashboard';
 import Header from './components/Common/Header';
 import Footer from './components/Common/Footer';
 
 import './App.css';
 
 function App() {
+  // Use the new, simpler hook
   const { isAuthenticated, user, loading } = useAuth();
 
   // Show a loading spinner while checking authentication
