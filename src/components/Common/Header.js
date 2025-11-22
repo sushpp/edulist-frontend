@@ -1,11 +1,10 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
-import './Common.css';
-
+import { useAuth } from '../../context/AuthContext';
 const Header = () => {
-  const { isAuthenticated, user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth(); // ✅ CORRECT USAGE
+
 
   const handleLogout = () => {
     logout();

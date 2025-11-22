@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import ReviewForm from './ReviewForm';
 import EnquiryForm from './EnquiryForm';
 import api from '../../services/api';

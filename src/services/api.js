@@ -1,16 +1,14 @@
 // src/services/api.js
 import axios from 'axios';
 
-// Create a single, robust Axios instance that reads from your .env file
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout for requests
+  timeout: 10000,
 });
 
-// Request interceptor to add the authentication token to every outgoing request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -19,23 +17,15 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle common errors globally
 api.interceptors.response.use(
-  (response) => {
-    // For successful responses (HTTP status 2xx)
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // If the server responds with a 401 (Unauthorized), it means the token is bad
     if (error.response?.status === 401) {
-      console.warn('Unauthorized! Logging out...');
+      console.warn('Unauthorized! Removing token and redirecting to login...');
       localStorage.removeItem('token');
-      // Redirect to the login page, but avoid an infinite redirect loop
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

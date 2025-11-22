@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import InstituteSidebar from './InstituteSidebar';
 import api from '../../services/api';
 import './InstituteDashboard.css';

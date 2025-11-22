@@ -1,8 +1,8 @@
 // src/components/Auth/Register.js
 
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
 const Register = () => {
@@ -11,46 +11,49 @@ const Register = () => {
     email: '',
     password: '',
     password2: '',
-    role: 'user', // Default role
+    role: 'user',
   });
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  const { register } = useContext(AuthContext);
+
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const onChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const onSubmit = async e => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setAlert(null);
 
     if (formData.password !== formData.password2) {
-      setAlert('Passwords do not match');
+      setAlert({ type: 'danger', message: 'Passwords do not match' });
       setLoading(false);
       return;
     }
 
     try {
-      // We send the entire formData object. The backend will pick what it needs.
       const res = await register(formData);
-      
-      if (res.success) {
-        setAlert({ type: 'success', message: 'Registration successful! Please login.' });
-        
-        // If role is 'institute', redirect to a new page to create their profile
-        if (formData.role === 'institute') {
-          setTimeout(() => {
-            navigate('/institute/create-profile'); // Create this new route in App.js
-          }, 1500);
-        } else {
-          // For 'user' or 'admin', redirect to login as before
-          setTimeout(() => navigate('/login'), 1500);
-        }
+
+      if (res.success && res.pending) {
+        // Institute path: pending approval
+        setAlert({ type: 'info', message: res.message || 'Account pending approval by admin' });
+        // do not navigate or store token
+      } else if (res.success && res.token) {
+        // Auto-approved user — navigate after successful register + auto-login
+        setAlert({ type: 'success', message: 'Registration successful! Redirecting...' });
+        // Navigate according to role of returned user
+        const role = res.user?.role || formData.role;
+        setTimeout(() => {
+          if (role === 'admin') navigate('/admin/dashboard');
+          else if (role === 'institute') navigate('/institute/dashboard');
+          else navigate('/user/dashboard');
+        }, 800);
+      } else {
+        setAlert({ type: 'success', message: 'Registration successful' });
       }
     } catch (err) {
-      setAlert({ type: 'danger', message: err.message || 'Registration failed' });
+      setAlert({ type: 'danger', message: err.message || err.msg || 'Registration failed' });
     } finally {
       setLoading(false);
     }
@@ -63,83 +66,43 @@ const Register = () => {
           <h1>Register with EduList</h1>
           <p>Create your account</p>
         </div>
-        
-        {alert && (
-          <div className={`alert alert-${alert.type}`}>
-            {alert.message}
-          </div>
-        )}
-        
+
+        {alert && <div className={`alert alert-${alert.type}`}>{alert.message}</div>}
+
         <form onSubmit={onSubmit}>
           <div className="form-group">
             <label htmlFor="role">Register as</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={onChange}
-              required
-            >
+            <select id="role" name="role" value={formData.role} onChange={onChange} required>
               <option value="user">User</option>
               <option value="institute">Institute</option>
             </select>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="name">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={onChange}
-              required
-            />
+            <input type="text" id="name" name="name" value={formData.name} onChange={onChange} required />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={onChange}
-              required
-            />
+            <input type="email" id="email" name="email" value={formData.email} onChange={onChange} required />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={onChange}
-              required
-              minLength="6"
-            />
+            <input type="password" id="password" name="password" value={formData.password} onChange={onChange} required minLength="6" />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password2">Confirm Password</label>
-            <input
-              type="password"
-              id="password2"
-              name="password2"
-              value={formData.password2}
-              onChange={onChange}
-              required
-              minLength="6"
-            />
+            <input type="password" id="password2" name="password2" value={formData.password2} onChange={onChange} required minLength="6" />
           </div>
-          
+
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Loading...' : 'Register'}
           </button>
         </form>
-        
+
         <div className="auth-footer">
           <p>
             Already have an account? <Link to="/login">Login</Link>
