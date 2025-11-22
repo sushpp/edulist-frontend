@@ -24,7 +24,6 @@ const authReducer = (state, action) => {
       };
     case 'LOGIN_SUCCESS':
     case 'REGISTER_SUCCESS':
-      // action.payload expected to contain { token, user }
       localStorage.setItem('token', action.payload.token);
       return {
         ...state,
@@ -57,11 +56,8 @@ export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   const setAuthTokenHeader = (token) => {
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete api.defaults.headers.common['Authorization'];
-    }
+    if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    else delete api.defaults.headers.common['Authorization'];
   };
 
   const loadUser = useCallback(async () => {
@@ -81,27 +77,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Register user
+  // Register
   const register = async (formData) => {
     try {
       const res = await api.post('/auth/register', formData);
 
-      // If backend returned token (auto-approved user), res.data will contain token + user
+      // If backend returns token/user (admin case), treat as REGISTER_SUCCESS
       if (res.data.token && res.data.user) {
         dispatch({
           type: 'REGISTER_SUCCESS',
           payload: { token: res.data.token, user: res.data.user }
         });
-
-        // set header for future requests
         setAuthTokenHeader(res.data.token);
-
-        // load user (or we already have user in payload)
         return { success: true, token: res.data.token, user: res.data.user };
       }
 
-      // Otherwise, registration succeeded but account is pending (institute)
-      return { success: true, pending: true, message: res.data.message };
+      // Pending registration (regular user/institute) — no token
+      return { success: true, pending: true, message: res.data.message || res.data };
     } catch (err) {
       const payload = err.response?.data || { message: 'Registration failed' };
       dispatch({ type: 'AUTH_ERROR', payload });
@@ -109,7 +101,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login user
+  // Login
   const login = async (formData) => {
     try {
       const res = await api.post('/auth/login', formData);
@@ -119,16 +111,15 @@ export const AuthProvider = ({ children }) => {
           type: 'LOGIN_SUCCESS',
           payload: { token: res.data.token, user: res.data.user }
         });
-
         setAuthTokenHeader(res.data.token);
-
         return { success: true, token: res.data.token, user: res.data.user };
       }
 
-      // Should not reach here normally
+      // Shouldn't happen ordinarily
       throw { message: 'Invalid login response from server' };
     } catch (err) {
       const payload = err.response?.data || { message: 'Login failed' };
+      // Do not auto-logout on 403 — it's a pending account; still dispatch AUTH_ERROR
       dispatch({ type: 'AUTH_ERROR', payload });
       throw payload;
     }
@@ -139,7 +130,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Try to load user when provider mounts if token exists
     if (state.token) {
       loadUser();
     } else {
@@ -151,15 +141,11 @@ export const AuthProvider = ({ children }) => {
     setAuthTokenHeader(state.token);
   }, [state.token]);
 
-  const value = {
-    ...state,
-    register,
-    login,
-    logout,
-    loadUser,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ ...state, register, login, logout, loadUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {

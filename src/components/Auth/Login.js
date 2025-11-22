@@ -25,17 +25,26 @@ const Login = () => {
     try {
       await login(formData);
       setAlert({ type: 'success', message: 'Login successful!' });
-      // navigation will be handled by effect when isAuthenticated/user updates
+      // navigation handled in effect after auth state updates
     } catch (err) {
       // err may be { message } or error response body
-      setAlert({ type: 'danger', message: err.message || err.msg || err.message || err || 'Login failed' });
+      const message = err?.message || err?.msg || err?.message || (err?.message ? err.message : 'Login failed');
+
+      // If server returned 403 in response, the payload will be e.g. { message: 'Your account is pending' }
+      if (err && err.message && /pending|pending approval|not approved/i.test(err.message)) {
+        setAlert({ type: 'info', message: err.message });
+      } else if (err && err.message && /Invalid credentials/i.test(err.message)) {
+        setAlert({ type: 'danger', message: 'Invalid email or password' });
+      } else {
+        setAlert({ type: 'danger', message });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Only navigate after we actually have an authenticated user
+    // navigate only when authenticated and user exists
     if (isAuthenticated && user) {
       if (user.role === 'admin') {
         navigate('/admin/dashboard');

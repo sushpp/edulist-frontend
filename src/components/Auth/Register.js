@@ -11,7 +11,7 @@ const Register = () => {
     email: '',
     password: '',
     password2: '',
-    role: 'user',
+    role: 'user', // user or institute (admin should be created manually)
   });
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -35,22 +35,20 @@ const Register = () => {
     try {
       const res = await register(formData);
 
-      if (res.success && res.pending) {
-        // Institute path: pending approval
-        setAlert({ type: 'info', message: res.message || 'Account pending approval by admin' });
-        // do not navigate or store token
-      } else if (res.success && res.token) {
-        // Auto-approved user — navigate after successful register + auto-login
-        setAlert({ type: 'success', message: 'Registration successful! Redirecting...' });
-        // Navigate according to role of returned user
+      if (res.pending) {
+        setAlert({ type: 'info', message: res.message || 'Registration pending admin approval.' });
+        // Keep user on register page; they must wait for admin approval
+      } else if (res.token) {
+        // Admin case (rare) — auto navigate by role
+        setAlert({ type: 'success', message: 'Registration successful. Redirecting...' });
         const role = res.user?.role || formData.role;
         setTimeout(() => {
           if (role === 'admin') navigate('/admin/dashboard');
           else if (role === 'institute') navigate('/institute/dashboard');
           else navigate('/user/dashboard');
-        }, 800);
+        }, 700);
       } else {
-        setAlert({ type: 'success', message: 'Registration successful' });
+        setAlert({ type: 'success', message: 'Registration successful.' });
       }
     } catch (err) {
       setAlert({ type: 'danger', message: err.message || err.msg || 'Registration failed' });
